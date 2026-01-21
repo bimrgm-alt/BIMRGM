@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Work Tracker Pro - iPhone Optimized</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-dim: #666666;
+            --primary: #2563eb;
+            --accent: #3b82f6;
+            --success: #10b981; /* Green */
+            --warning: #f59e0b; /* Orange */
+            --danger: #ef4444;  /* Red */
+            --ot-color: #3b82f6; /* Blue */
+            --border: #e5e7eb;
+            --shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --cycle-highlight: rgba(37, 99, 235, 0.05);
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #111827;
+            --card-bg: #1f2937;
+            --text-main: #f9fafb;
+            --text-dim: #9ca3af;
+            --primary: #60a5fa;
+            --border: #374151;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --cycle-highlight: rgba(96, 165, 250, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            transition: background 0.3s ease;
+            padding-bottom: env(safe-area-inset-bottom);
+            font-size: 14px;
+        }
+
+        header {
+            background: var(--card-bg);
+            padding: 0.75rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        header h2 { font-size: 1.1rem; }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0.75rem;
+        }
+
+        .cycle-info {
+            background: var(--primary);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            margin-bottom: 0.75rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            padding: 0.75rem 0.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+            letter-spacing: 0.02em;
+        }
+
+        .stat-card p {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .calendar-container {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            margin-bottom: 1rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            padding: 0 0.25rem;
+        }
+
+        .calendar-header h3 { font-size: 1rem; }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+
+        .calendar-day-label {
+            text-align: center;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--text-dim);
+            padding-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .day {
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            position: relative;
+            background: var(--card-bg);
+        }
+
+        .day.today { border: 2px solid var(--primary); font-weight: 700; }
+        .day.not-month { opacity: 0.15; pointer-events: none; border: none; }
+        
+        .day.status-work { background-color: var(--success); color: white; border-color: transparent; }
+        .day.status-off { background-color: var(--warning); color: white; border-color: transparent; }
+        .day.status-holiday { background-color: var(--danger); color: white; border-color: transparent; }
+        .day.status-leave { background-color: #6b7280; color: white; border-color: transparent; }
+        .day.has-ot { background-color: var(--ot-color) !important; color: white !important; border-color: transparent; }
+
+        .ot-badge {
+            font-size: 0.55rem;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 0px 3px;
+            border-radius: 3px;
+            font-weight: 700;
+            margin-top: 1px;
+        }
+
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(2px);
+            display: none;
+            justify-content: center;
+            align-items: flex-end;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 16px 16px 0 0;
+            padding: 1.25rem;
+            padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+            animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .form-group { margin-bottom: 0.75rem; }
+        label { display: block; margin-bottom: 0.25rem; font-size: 0.8rem; font-weight: 700; }
+        select, input, textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-size: 0.9rem;
+            -webkit-appearance: none;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-secondary { background: var(--border); color: var(--text-main); margin-top: 8px; width: 100%; }
+        .btn-danger { background: var(--danger); color: white; margin-top: 15px; width: 100%; font-size: 0.75rem; padding: 6px; }
+
+        .view-toggle {
+            display: flex;
+            background: var(--border);
+            border-radius: 8px;
+            padding: 2px;
+            margin-bottom: 0.75rem;
+        }
+
+        .view-toggle button {
+            flex: 1;
+            padding: 6px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-dim);
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .view-toggle button.active {
+            background: var(--card-bg);
+            color: var(--primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .salary-config {
+            background: var(--card-bg);
+            padding: 0.75rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 0.75rem;
+        }
+
+        .hidden { display: none !important; }
+        .small-btn { padding: 4px 8px; font-size: 0.7rem; }
+        
+    </style>
+</head>
+<body>
+
+<header>
+    <h2 id="header-title">Work Tracker Pro</h2>
+    <button onclick="toggleTheme()" id="theme-btn" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">🌓</button>
+</header>
+
+<div class="container">
+    <div id="cycle-banner" class="cycle-info">
+        Cycle: 21st to 20th
+    </div>
+
+    <div class="view-toggle">
+        <button id="btn-month" class="active" onclick="switchView('month')">Pay Cycle</button>
+        <button id="btn-year" onclick="switchView('year')">Monthly Summary</button>
+    </div>
+
+    <!-- Month View -->
+    <div id="month-view">
+        <div class="calendar-header">
+            <button class="small-btn btn" onclick="changeMonth(-1)">◀</button>
+            <div style="text-align:center">
+                <h3 id="current-month-display">Jan 2024</h3>
+                <small id="cycle-dates-label" style="color: var(--text-dim); font-size: 0.6rem;">Dec 21 - Jan 20</small>
+            </div>
+            <button class="small-btn btn" onclick="changeMonth(1)">▶</button>
+        </div>
+
+        <div class="calendar-container">
+            <div class="calendar-grid" id="calendar-body"></div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><h3>Cycle Work</h3><p id="m-work">0</p></div>
+            <div class="stat-card"><h3>Cycle Off</h3><p id="m-off">0</p></div>
+            <div class="stat-card"><h3>Holiday</h3><p id="m-holiday">0</p></div>
+            <div class="stat-card"><h3>OT Hours</h3><p id="m-ot" style="color: var(--ot-color)">0h</p></div>
+        </div>
+    </div>
+
+    <!-- Monthly Summary View -->
+    <div id="year-view" class="hidden">
+        <div class="calendar-header" style="margin-bottom: 0.75rem;">
+            <div style="display:flex; gap: 8px; width: 100%;">
+                <select id="summary-year-select" style="flex:1" onchange="render()"></select>
+                <select id="summary-month-select" style="flex:1" onchange="render()"></select>
+            </div>
+        </div>
+
+        <div class="salary-config">
+            <div style="display: flex; gap: 8px;">
+                <div style="flex:1">
+                    <label>Base Salary (¥)</label>
+                    <input type="number" id="base-salary-input" placeholder="e.g. 250000" onchange="saveSalary()" inputmode="numeric">
+                </div>
+                <div style="flex:1">
+                    <label>OT Rate (¥/h)</label>
+                    <input type="number" id="ot-rate-input" placeholder="e.g. 1500" onchange="saveSalary()" inputmode="numeric">
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card" style="grid-column: span 2;">
+                <h3 id="income-label">Actual Monthly Income</h3>
+                <p id="y-total-pay" style="font-size: 1.5rem;">¥0</p>
+            </div>
+            <div class="stat-card"><h3>Monthly OT</h3><p id="y-ot" style="color: var(--ot-color)">0h</p></div>
+            <div class="stat-card"><h3>Work Days</h3><p id="y-work">0</p></div>
+            <div class="stat-card"><h3>Off Days</h3><p id="y-off">0</p></div>
+            <div class="stat-card"><h3>Holidays</h3><p id="y-holiday">0</p></div>
+        </div>
+    </div>
+
+    <div style="display: flex; gap: 8px; margin-top: 1rem;">
+        <button class="btn" onclick="exportCSV()" style="background: var(--success); color: white; flex: 1; font-size: 0.8rem;">📥 CSV Export</button>
+        <button class="btn btn-danger" onclick="resetData()" style="margin-top:0; flex: 0.5;">🗑️ Reset</button>
+    </div>
+</div>
+
+<div id="modal-overlay">
+    <div class="modal">
+        <h3 id="modal-date-label" style="margin-bottom: 1rem; font-size: 1rem;">Date Selected</h3>
+        
+        <div class="form-group">
+            <label>Status</label>
+            <select id="status-select">
+                <option value="none">None</option>
+                <option value="work">Work</option>
+                <option value="off">Week Off</option>
+                <option value="holiday">Holiday</option>
+                <option value="leave">Leave</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>OT Hours</label>
+            <input type="number" id="ot-input" placeholder="0.0" step="0.5" min="0" inputmode="decimal">
+        </div>
+
+        <div class="form-group">
+            <label>Note</label>
+            <textarea id="note-input" rows="2" placeholder="Brief note..."></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    </div>
+</div>
+
+<script>
+    let currentDate = new Date();
+    let currentView = 'month'; 
+    let workData = JSON.parse(localStorage.getItem('work_tracker_data')) || {};
+    let salaryData = JSON.parse(localStorage.getItem('work_tracker_salary')) || { base: 0, otRate: 0 };
+
+    const modal = document.getElementById('modal-overlay');
+    const calendarBody = document.getElementById('calendar-body');
+    let activeEditDate = null;
+
+    function init() {
+        applyTheme();
+        populateSelectors();
+        document.getElementById('base-salary-input').value = salaryData.base || '';
+        document.getElementById('ot-rate-input').value = salaryData.otRate || '';
+        render();
+    }
+
+    function populateSelectors() {
+        const yearSel = document.getElementById('summary-year-select');
+        const monthSel = document.getElementById('summary-month-select');
+        
+        // Years (3 years back/forward)
+        const currentYear = new Date().getFullYear();
+        for(let i = currentYear - 2; i <= currentYear + 2; i++) {
+            let opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = i;
+            if(i === currentYear) opt.selected = true;
+            yearSel.appendChild(opt);
+        }
+
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        months.forEach((m, i) => {
+            let opt = document.createElement('option');
+            opt.value = i;
+            opt.innerText = m;
+            if(i === new Date().getMonth()) opt.selected = true;
+            monthSel.appendChild(opt);
+        });
+    }
+
+    function getCycleRange(date) {
+        const year = date.getFullYear();
+        const month = date.getMonth(); 
+        const start = new Date(year, month - 1, 21, 0, 0, 0, 0);
+        const end = new Date(year, month, 20, 23, 59, 59, 999);
+        return { start, end };
+    }
+
+    function render() {
+        if (currentView === 'month') {
+            renderCalendar();
+            updateStats('month');
+        } else {
+            updateStats('year');
+        }
+    }
+
+    function renderCalendar() {
+        calendarBody.innerHTML = '';
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const { start, end } = getCycleRange(currentDate);
+
+        document.getElementById('current-month-display').innerText = 
+            new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(currentDate);
+        
+        document.getElementById('cycle-dates-label').innerText = 
+            `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
+
+        const dayLabels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        dayLabels.forEach(d => {
+            const el = document.createElement('div');
+            el.className = 'calendar-day-label';
+            el.innerText = d;
+            calendarBody.appendChild(el);
+        });
+
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+        for (let i = firstDayOfMonth; i > 0; i--) {
+            const dayNum = prevMonthLastDay - i + 1;
+            createDayElement(dayNum, new Date(year, month - 1, dayNum), true);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+            createDayElement(d, new Date(year, month, d), false);
+        }
+    }
+
+    function createDayElement(dayNum, fullDate, isPrevMonth) {
+        const dateStr = formatDate(fullDate);
+        const entry = workData[dateStr];
+        
+        const el = document.createElement('div');
+        el.className = 'day';
+        if (isPrevMonth) el.classList.add('not-month');
+        
+        const todayStr = formatDate(new Date());
+        if (dateStr === todayStr) el.classList.add('today');
+
+        if (entry && entry.status !== 'none') {
+            el.classList.add(`status-${entry.status}`);
+            if (entry.ot > 0) el.classList.add('has-ot');
+        }
+
+        el.innerHTML = `<span>${dayNum}</span>`;
+
+        if (entry && entry.ot > 0) {
+            const otTag = document.createElement('span');
+            otTag.className = 'ot-badge';
+            otTag.innerText = `+${entry.ot}`;
+            el.appendChild(otTag);
+        }
+
+        el.onclick = () => openModal(fullDate);
+        calendarBody.appendChild(el);
+    }
+
+    function updateStats(type) {
+        let work = 0, off = 0, holiday = 0, ot = 0;
+        
+        const targetYear = parseInt(document.getElementById('summary-year-select').value);
+        const targetMonth = parseInt(document.getElementById('summary-month-select').value);
+        const { start, end } = getCycleRange(currentDate);
+
+        Object.keys(workData).forEach(dateStr => {
+            const d = new Date(dateStr);
+            const checkDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            
+            // For monthly summary, we check if the date falls in the selected calendar month
+            let isTarget = (type === 'month') 
+                ? (checkDate >= start && checkDate <= end) 
+                : (checkDate.getFullYear() === targetYear && checkDate.getMonth() === targetMonth);
+
+            if (isTarget) {
+                const item = workData[dateStr];
+                if (item.status === 'work') work++;
+                if (item.status === 'off') off++;
+                if (item.status === 'holiday') holiday++;
+                ot += parseFloat(item.ot || 0);
+            }
+        });
+
+        if (type === 'month') {
+            document.getElementById('m-work').innerText = work;
+            document.getElementById('m-off').innerText = off;
+            document.getElementById('m-holiday').innerText = holiday;
+            document.getElementById('m-ot').innerText = ot.toFixed(1) + 'h';
+        } else {
+            document.getElementById('y-work').innerText = work;
+            document.getElementById('y-off').innerText = off;
+            document.getElementById('y-holiday').innerText = holiday;
+            document.getElementById('y-ot').innerText = ot.toFixed(1) + 'h';
+
+            const baseIncome = parseFloat(salaryData.base || 0);
+            const otIncome = (salaryData.otRate || 0) * ot;
+            const totalMonthly = baseIncome + otIncome;
+            
+            document.getElementById('y-total-pay').innerText = '¥' + Math.floor(totalMonthly).toLocaleString();
+        }
+    }
+
+    function saveSalary() {
+        salaryData.base = parseFloat(document.getElementById('base-salary-input').value) || 0;
+        salaryData.otRate = parseFloat(document.getElementById('ot-rate-input').value) || 0;
+        localStorage.setItem('work_tracker_salary', JSON.stringify(salaryData));
+        if (currentView === 'year') updateStats('year');
+    }
+
+    function openModal(date) {
+        activeEditDate = formatDate(date);
+        const entry = workData[activeEditDate] || { status: 'work', ot: 0, note: '' };
+        
+        document.getElementById('modal-date-label').innerText = date.toLocaleDateString('en-US', { 
+            month: 'short', day: 'numeric', weekday: 'short'
+        });
+        document.getElementById('status-select').value = entry.status;
+        document.getElementById('ot-input').value = entry.ot || '';
+        document.getElementById('note-input').value = entry.note || '';
+        
+        modal.style.display = 'flex';
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        activeEditDate = null;
+    }
+
+    function saveEntry() {
+        const status = document.getElementById('status-select').value;
+        const otVal = document.getElementById('ot-input').value;
+        const ot = otVal === '' ? 0 : parseFloat(otVal);
+        const note = document.getElementById('note-input').value;
+
+        if (status === 'none' && ot === 0 && note === '') {
+            delete workData[activeEditDate];
+        } else {
+            workData[activeEditDate] = { status, ot, note };
+        }
+
+        localStorage.setItem('work_tracker_data', JSON.stringify(workData));
+        closeModal();
+        render();
+    }
+
+    function formatDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function changeMonth(dir) {
+        currentDate.setMonth(currentDate.getMonth() + dir);
+        render();
+    }
+
+    function switchView(view) {
+        currentView = view;
+        document.getElementById('month-view').classList.toggle('hidden', view !== 'month');
+        document.getElementById('year-view').classList.toggle('hidden', view !== 'year');
+        document.getElementById('btn-month').classList.toggle('active', view === 'month');
+        document.getElementById('btn-year').classList.toggle('active', view === 'year');
+        render();
+    }
+
+    function toggleTheme() {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', next);
+        localStorage.setItem('work_tracker_theme', next);
+    }
+
+    function applyTheme() {
+        const saved = localStorage.getItem('work_tracker_theme') || 'light';
+        document.body.setAttribute('data-theme', saved);
+    }
+
+    function exportCSV() {
+        let csv = "Date,Status,Overtime,Note\n";
+        const sortedDates = Object.keys(workData).sort();
+        sortedDates.forEach(dateStr => {
+            const item = workData[dateStr];
+            csv += `${dateStr},${item.status},${item.ot},"${(item.note || '').replace(/"/g, '""')}"\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Work_History_Export.csv`;
+        a.click();
+    }
+
+    function resetData() {
+        if (confirm("Delete all history?")) {
+            workData = {};
+            localStorage.removeItem('work_tracker_data');
+            render();
+        }
+    }
+
+    window.onload = init;
+</script>
+
+</body>
+</html>

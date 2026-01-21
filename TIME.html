@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Production Pro</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: contain;
+            background-color: black;
+            color: #f1f5f9;
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .glass {
+            background: rgba(20, 20, 20, 0.85);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        .record-card.minimized .details-pane {
+            display: none;
+        }
+
+        .record-card.minimized {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+    </style>
+</head>
+
+<body class="transition-colors duration-300">
+
+<!-- ================= HEADER ================= -->
+<header class="fixed top-0 w-full glass z-40 border-b border-zinc-800 px-6 py-4 flex justify-between items-center">
+    <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <i class="ph-fill ph-factory text-white"></i>
+        </div>
+        <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            Production Pro
+        </h1>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <!-- ✅ ADDED NEXT BUTTON -->
+        <a href="page1.html"
+           class="text-[11px] font-black uppercase tracking-widest text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-full hover:bg-blue-500/10 transition-all">
+            Next
+        </a>
+
+        <button onclick="toggleSettings()" class="text-slate-400 hover:text-blue-400 transition-colors p-2">
+            <i class="ph-bold ph-sliders-horizontal text-2xl"></i>
+        </button>
+    </div>
+</header>
+
+<!-- Main Content Area -->
+    <main class="pt-24 pb-32 px-4 max-w-md mx-auto">
+        
+        <!-- INPUT TAB -->
+        <section id="tab-input" class="tab-content active">
+            <form id="trackerForm" class="space-y-4">
+                <input type="hidden" id="editRecordId" value="">
+                
+                <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Company Entity</label>
+                    <select id="companySelect" required class="w-full bg-zinc-800 border-none rounded-2xl p-4 text-lg font-medium focus:ring-0 outline-none transition-all text-white appearance-none">
+                        <option value="">Select Company</option>
+                    </select>
+                </div>
+
+                <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                    <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Product Reference</label>
+                    <input type="text" id="productInput" list="productPresets" placeholder="Part Number or Name..." required class="w-full bg-zinc-800 border-none rounded-2xl p-4 text-lg font-medium focus:ring-0 outline-none transition-all text-white">
+                    <datalist id="productPresets"></datalist>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Volume</label>
+                        <input type="number" step="0.01" id="qtyInput" placeholder="0.00" required class="w-full bg-transparent border-none p-0 text-3xl font-black focus:ring-0 outline-none text-white placeholder:text-zinc-700">
+                    </div>
+                    <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 ml-1">Metric</label>
+                        <select id="unitSelect" class="w-full bg-transparent border-none p-0 text-2xl font-bold focus:ring-0 outline-none text-blue-400 appearance-none">
+                            <option value="KG">KG</option>
+                            <option value="BOX">BOX</option>
+                            <option value="PCS">PCS</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500/80 mb-3 ml-1">Start Phase</label>
+                        <input type="text" id="startTime" readonly class="time-picker w-full bg-transparent border-none p-0 text-2xl font-bold focus:ring-0 outline-none cursor-pointer text-white">
+                    </div>
+                    <div class="bg-zinc-900/50 p-5 rounded-[2rem] shadow-sm border border-zinc-800/50">
+                        <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-rose-500/80 mb-3 ml-1">End Phase</label>
+                        <input type="text" id="endTime" readonly class="time-picker w-full bg-transparent border-none p-0 text-2xl font-bold focus:ring-0 outline-none cursor-pointer text-white">
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 pt-4">
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 active:scale-[0.97] text-white font-black py-5 rounded-[1.5rem] shadow-xl shadow-blue-500/20 transition-all text-xl uppercase tracking-widest">
+                        Log Entry
+                    </button>
+                    <button type="button" id="cancelEditBtn" onclick="cancelEdit()" class="hidden w-full bg-zinc-800 text-slate-400 font-bold py-4 rounded-[1.5rem] transition-all uppercase text-xs tracking-widest">
+                        Discard Changes
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- RECORDS TAB -->
+        <section id="tab-records" class="tab-content">
+            <div class="flex justify-between items-center mb-6 px-2">
+                <h2 class="text-2xl font-black italic tracking-tight">HISTORY</h2>
+                <div class="flex gap-2">
+                    <button onclick="toggleAllRecords()" class="text-[10px] font-black bg-zinc-800 px-3 py-1 rounded-full text-slate-400 uppercase">Toggle All</button>
+                    <button onclick="clearAllRecords()" class="w-8 h-8 flex items-center justify-center bg-rose-500/10 text-rose-500 rounded-full active:scale-90 transition-transform">
+                        <i class="ph-bold ph-trash text-lg"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="recordsContainer" class="space-y-3">
+                <!-- Records injected here -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Settings Sidebar Overlay -->
+    <div id="settingsOverlay" class="fixed inset-0 bg-black/80 z-50 hidden opacity-0 transition-opacity duration-300" onclick="toggleSettings()">
+        <div class="absolute right-0 top-0 h-full w-80 bg-zinc-950 p-8 shadow-2xl transition-transform duration-300 translate-x-full border-l border-zinc-800/50" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-10">
+                <h3 class="text-2xl font-black">CONFIG</h3>
+                <button onclick="toggleSettings()" class="w-10 h-10 bg-zinc-900 rounded-full flex items-center justify-center"><i class="ph-bold ph-x text-xl"></i></button>
+            </div>
+            <!-- ... Settings content same as before ... -->
+            <div class="space-y-8">
+                <div class="p-5 bg-blue-600/10 rounded-3xl border border-blue-500/20">
+                    <p class="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Active UI Profile</p>
+                    <p class="text-white font-bold flex items-center gap-2">
+                        <i class="ph-fill ph-moon-stars text-blue-400"></i> AMOLED Night Mode
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">Register New Client</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="newCompName" class="flex-1 bg-zinc-900 border border-zinc-800 rounded-2xl p-4 text-sm outline-none text-white focus:border-blue-500" placeholder="Company Name...">
+                        <button onclick="addCompany()" class="bg-blue-600 text-white px-5 rounded-2xl active:scale-90 transition-transform"><i class="ph-bold ph-plus"></i></button>
+                    </div>
+                </div>
+                <div class="border-t border-zinc-800/50 pt-6">
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Database Directory</label>
+                    <div id="manageList" class="space-y-3 max-h-[45vh] overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 w-full glass border-t border-zinc-800/50 z-40 safe-area-bottom">
+        <div class="max-w-md mx-auto flex justify-around py-4">
+            <button onclick="switchTab('input')" id="nav-input" class="flex flex-col items-center gap-1.5 text-blue-400 transition-all">
+                <i class="ph-fill ph-plus-circle text-2xl"></i>
+                <span class="text-[10px] font-black uppercase tracking-tighter">New Entry</span>
+            </button>
+            <button onclick="switchTab('records')" id="nav-records" class="flex flex-col items-center gap-1.5 text-slate-600 transition-all">
+                <i class="ph-bold ph-clock-counter-clockwise text-2xl"></i>
+                <span class="text-[10px] font-black uppercase tracking-tighter">Logs</span>
+            </button>
+        </div>
+    </nav>
+
+    <script>
+        const DEFAULT_COMPANIES = [
+            "Ashahi", "FUZI SEIRA", "HOKUTO(北斗)", "Katsusika ネジ", "KHAMIDA", "KOYA-UCHI", "NDN", "TAKAO(高尾)", 
+            "Toushou(東証)", "YAMAMOTO(山本)", "YOSIDA(吉田)", "コーマ(KOMA)", "ゴトウ(GOTOU)", "コバユ(Kobayu)", 
+            "ボーセイ(Boshei)", "ヤサト(Yasato)", "ユーウ(Youu)", "信和(Shinwa)", "共和(Kyowa)", "前田(Maeda)", 
+            "太田(Oota)", "山下(Yamasita)", "日章(Nissho)", "東京ラセン(Tokyo Rasen)", "東洋(toyo)", "桂川(ktsuragawa)", 
+            "秋山(AKIYAMA)", "藤崎鋲螺(fujisaki)", "赤羽(Akabane)"
+        ];
+
+        let state = {
+            companies: JSON.parse(localStorage.getItem('prodPro_comps')) || DEFAULT_COMPANIES,
+            records: JSON.parse(localStorage.getItem('prodPro_records')) || [],
+            minimizedIds: new Set()
+        };
+
+        function init() {
+            flatpickr(".time-picker", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                time_24hr: true,
+                disableMobile: false
+            });
+            renderCompanySelect();
+            renderManageList();
+            renderRecords();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            const navInput = document.getElementById('nav-input');
+            const navRecords = document.getElementById('nav-records');
+            if (tab === 'input') {
+                navInput.className = "flex flex-col items-center gap-1.5 text-blue-400";
+                navRecords.className = "flex flex-col items-center gap-1.5 text-slate-600";
+                navInput.querySelector('i').className = "ph-fill ph-plus-circle text-2xl";
+                navRecords.querySelector('i').className = "ph-bold ph-clock-counter-clockwise text-2xl";
+            } else {
+                navInput.className = "flex flex-col items-center gap-1.5 text-slate-600";
+                navRecords.className = "flex flex-col items-center gap-1.5 text-blue-400";
+                navInput.querySelector('i').className = "ph-bold ph-plus-circle text-2xl";
+                navRecords.querySelector('i').className = "ph-fill ph-clock-counter-clockwise text-2xl";
+                renderRecords();
+            }
+        }
+
+        function toggleRecord(id) {
+            if (state.minimizedIds.has(id)) {
+                state.minimizedIds.delete(id);
+            } else {
+                state.minimizedIds.add(id);
+            }
+            renderRecords();
+        }
+
+        function toggleAllRecords() {
+            if (state.minimizedIds.size === state.records.length) {
+                state.minimizedIds.clear();
+            } else {
+                state.records.forEach(r => state.minimizedIds.add(r.id));
+            }
+            renderRecords();
+        }
+
+        function save() {
+            localStorage.setItem('prodPro_comps', JSON.stringify(state.companies));
+            localStorage.setItem('prodPro_records', JSON.stringify(state.records));
+            renderCompanySelect();
+            renderManageList();
+            renderRecords();
+        }
+
+        function renderCompanySelect() {
+            const select = document.getElementById('companySelect');
+            const sorted = [...state.companies].sort((a, b) => a.localeCompare(b, 'ja'));
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">Select Company</option>' + 
+                sorted.map(c => `<option value="${c}">${c}</option>`).join('');
+            if (currentVal) select.value = currentVal;
+        }
+
+        function renderManageList() {
+            const list = document.getElementById('manageList');
+            const sorted = [...state.companies].sort((a, b) => a.localeCompare(b, 'ja'));
+            list.innerHTML = sorted.map(c => `
+                <div class="flex justify-between items-center bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
+                    <span class="text-sm font-bold text-slate-200">${c}</span>
+                    <button onclick="removeCompany('${c}')" class="text-rose-500/60 hover:text-rose-500 transition-colors">
+                        <i class="ph-bold ph-trash-simple text-lg"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addCompany() {
+            const input = document.getElementById('newCompName');
+            const val = input.value.trim();
+            if (val && !state.companies.includes(val)) {
+                state.companies.push(val);
+                input.value = '';
+                save();
+            }
+        }
+
+        function removeCompany(name) {
+            if(confirm(`Remove ${name}?`)) {
+                state.companies = state.companies.filter(c => c !== name);
+                save();
+            }
+        }
+
+        function editRecord(id) {
+            const record = state.records.find(r => r.id === id);
+            if (!record) return;
+            document.getElementById('editRecordId').value = record.id;
+            document.getElementById('companySelect').value = record.company;
+            document.getElementById('productInput').value = record.product;
+            document.getElementById('qtyInput').value = record.qty;
+            document.getElementById('unitSelect').value = record.unit;
+            document.getElementById('startTime').value = record.start;
+            document.getElementById('endTime').value = record.end;
+            document.getElementById('submitBtn').innerText = "Update Entry";
+            document.getElementById('submitBtn').classList.replace('bg-blue-600', 'bg-emerald-600');
+            document.getElementById('cancelEditBtn').classList.remove('hidden');
+            switchTab('input');
+        }
+
+        function cancelEdit() {
+            document.getElementById('trackerForm').reset();
+            document.getElementById('editRecordId').value = "";
+            document.getElementById('submitBtn').innerText = "Log Entry";
+            document.getElementById('submitBtn').classList.replace('bg-emerald-600', 'bg-blue-600');
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        document.getElementById('trackerForm').onsubmit = (e) => {
+            e.preventDefault();
+            const editId = document.getElementById('editRecordId').value;
+            const start = document.getElementById('startTime').value;
+            const end = document.getElementById('endTime').value;
+            const qty = parseFloat(document.getElementById('qtyInput').value);
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            let mins = (h2 * 60 + m2) - (h1 * 60 + m1);
+            if (mins <= 0) mins += 1440;
+            const avg = qty > 0 ? (mins / qty).toFixed(2) : "0.00";
+            const recordData = {
+                company: document.getElementById('companySelect').value,
+                product: document.getElementById('productInput').value,
+                qty: qty,
+                unit: document.getElementById('unitSelect').value,
+                start, end, mins, avg
+            };
+            if (editId) {
+                const idx = state.records.findIndex(r => r.id == editId);
+                if (idx !== -1) state.records[idx] = { ...state.records[idx], ...recordData };
+                cancelEdit();
+            } else {
+                state.records.unshift({ id: Date.now(), ...recordData });
+                e.target.reset();
+            }
+            save();
+            switchTab('records');
+            if (window.navigator.vibrate) window.navigator.vibrate(40);
+        };
+
+        function renderRecords() {
+            const container = document.getElementById('recordsContainer');
+            if (state.records.length === 0) {
+                container.innerHTML = `<div class="text-center py-24 opacity-10"><i class="ph-bold ph-folder-open text-6xl block mb-4"></i><p class="font-black uppercase tracking-[0.3em] text-xs">Empty</p></div>`;
+                return;
+            }
+
+            container.innerHTML = state.records.map(r => {
+                const isMin = state.minimizedIds.has(r.id);
+                return `
+                <div class="record-card ${isMin ? 'minimized' : ''} bg-zinc-900/60 px-5 py-4 rounded-3xl border border-zinc-800 shadow-xl relative transition-all overflow-hidden">
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="flex-1 cursor-pointer" onclick="toggleRecord(${r.id})">
+                            <span class="text-[8px] font-black uppercase text-blue-500 tracking-[0.2em] block">${r.company}</span>
+                            <h3 class="text-base font-bold text-white truncate w-48">${r.product}</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <div class="text-right mr-2">
+                                <span class="text-xl font-black text-white leading-none">${r.avg}</span>
+                                <span class="text-[8px] font-bold text-slate-500 block uppercase">Min/${r.unit}</span>
+                            </div>
+                            <button onclick="editRecord(${r.id})" class="w-8 h-8 flex items-center justify-center bg-blue-600/20 text-blue-400 rounded-xl active:scale-90">
+                                <i class="ph-bold ph-pencil-simple-line text-base"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="details-pane mt-4 space-y-3">
+                        <div class="grid grid-cols-2 gap-4 p-3 bg-black/40 rounded-2xl border border-white/5">
+                            <div>
+                                <p class="text-[8px] font-black text-slate-600 uppercase tracking-widest">Output</p>
+                                <p class="font-bold text-slate-200 text-sm">${r.qty} ${r.unit}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[8px] font-black text-slate-600 uppercase tracking-widest">Time</p>
+                                <p class="font-bold text-slate-200 text-sm">${r.mins} min</p>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-zinc-800/50 flex justify-between items-center">
+                            <p class="text-[8px] font-black text-slate-600 uppercase tracking-widest">Timeline</p>
+                            <p class="text-[10px] font-black text-emerald-400 tracking-wider">${r.start} <i class="ph-bold ph-arrow-right mx-1 text-[8px] text-zinc-800"></i> ${r.end}</p>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function clearAllRecords() {
+            if (confirm("Delete history?")) { state.records = []; save(); }
+        }
+
+        function toggleSettings() {
+            const overlay = document.getElementById('settingsOverlay');
+            const panel = overlay.firstElementChild;
+            if (overlay.classList.contains('hidden')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => { overlay.classList.add('opacity-100'); panel.classList.remove('translate-x-full'); }, 10);
+            } else {
+                overlay.classList.remove('opacity-100'); panel.classList.add('translate-x-full');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
