@@ -6,37 +6,46 @@
     <title>HT Production Scheduler</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --primary: #2563eb; }
+        :root { 
+            --primary: #3b82f6; 
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: #334155;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+        }
         body { 
-            background-color: #f8fafc; 
+            background-color: var(--bg-main); 
+            color: var(--text-main);
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             -webkit-font-smoothing: antialiased;
+            overscroll-behavior-y: contain;
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        /* Compact Inputs */
         .form-input {
-            width: 100%; padding: 0.4rem; border: 1px solid #e2e8f0;
-            border-radius: 0.4rem; background: white; font-size: 0.8rem;
+            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
+            border-radius: 0.5rem; background: #0f172a; font-size: 0.9rem;
+            color: white;
             transition: all 0.2s;
         }
-        .form-input:focus { border-color: #2563eb; outline: none; }
+        .form-input:focus { border-color: #3b82f6; outline: none; ring: 2px; ring-color: #1e40af; }
         
-        /* Tightened Columns */
-        .col-qty { width: 48px; }
-        .col-lot { width: 42px; }
+        .col-qty { width: 50px; }
+        .col-lot { width: 44px; }
         .col-gap { width: 62px; }
         .col-times { width: 75px; }
         
         th { 
-            background: #f1f5f9; 
+            background: #1e293b; 
             color: #64748b; 
             padding: 0.5rem 0.25rem; 
             font-size: 0.6rem; 
             text-transform: uppercase; 
-            letter-spacing: 0.01em; 
+            letter-spacing: 0.05em; 
             font-weight: 800;
+            border-bottom: 1px solid var(--border-color);
         }
         td { padding: 0.5rem 0.25rem; }
         
@@ -49,10 +58,10 @@
         .company-pill { height: 1.8rem; width: 4px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
         
         .btn-tiny {
-            padding: 0.35rem 0.5rem;
-            font-size: 0.7rem;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
             font-weight: 800;
-            border-radius: 0.4rem;
+            border-radius: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.25rem;
@@ -63,145 +72,194 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 115px;
+            max-width: 110px;
         }
 
         details summary::-webkit-details-marker { display:none; }
         details summary { list-style: none; }
         
-        /* Row color alternating/variety */
-        .row-colors-variety tr:nth-child(7n+1) { background-color: rgba(239, 68, 68, 0.04); }
-        .row-colors-variety tr:nth-child(7n+2) { background-color: rgba(245, 158, 11, 0.04); }
-        .row-colors-variety tr:nth-child(7n+3) { background-color: rgba(16, 185, 129, 0.04); }
-        .row-colors-variety tr:nth-child(7n+4) { background-color: rgba(59, 130, 246, 0.04); }
-        .row-colors-variety tr:nth-child(7n+5) { background-color: rgba(139, 92, 246, 0.04); }
-        .row-colors-variety tr:nth-child(7n+6) { background-color: rgba(236, 72, 153, 0.04); }
-        .row-colors-variety tr:nth-child(7n+0) { background-color: rgba(6, 182, 212, 0.04); }
+        /* Edit Modal Styling */
+        #edit-modal {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateY(100%);
+            background-color: #1e293b;
+        }
+        #edit-modal.active {
+            transform: translateY(0);
+        }
+
+        /* Subtle Dark Row Alternation */
+        .row-colors-variety tr:nth-child(odd) { background-color: rgba(255, 255, 255, 0.02); }
+        .row-colors-variety tr:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+        /* Custom scrollbar for dark mode */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        select {
+            color-scheme: dark;
+        }
     </style>
 </head>
-<body class="p-1.5 md:p-4">
+<body class="p-2 md:p-4">
 
 <div class="max-w-3xl mx-auto">
-    <header class="mb-3 flex flex-row justify-between items-center px-1">
+    <header class="mb-4 flex flex-row justify-between items-center px-1">
         <div class="flex items-center gap-1.5">
-            <div class="bg-blue-600 p-1 rounded-md">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-900/20">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
-            <h1 class="text-base font-black text-slate-800 tracking-tighter">HT Scheduler</h1>
+            <h1 class="text-lg font-black text-slate-100 tracking-tighter">HT Scheduler</h1>
         </div>
-        <nav class="flex bg-slate-200/60 p-0.5 rounded-lg">
-            <button onclick="switchTab('daily')" id="tab-daily" class="px-2.5 py-1 rounded-md font-bold transition-all text-[10px]">Daily</button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="px-2.5 py-1 rounded-md font-bold transition-all text-[10px]">Master</button>
+        <nav class="flex bg-slate-800/60 p-1 rounded-xl border border-slate-700">
+            <button onclick="switchTab('daily')" id="tab-daily" class="px-4 py-1.5 rounded-lg font-bold transition-all text-xs">Daily</button>
+            <button onclick="switchTab('settings')" id="tab-settings" class="px-4 py-1.5 rounded-lg font-bold transition-all text-xs">Master</button>
         </nav>
     </header>
 
     <!-- DAILY PRODUCTION -->
     <div id="content-daily" class="tab-content">
-        <!-- Search and Global Actions -->
-        <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-200 mb-2 space-y-2">
+        <div class="bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-700 mb-3 space-y-3">
             <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-1">
-                    <input type="time" id="shift-start" class="form-input font-bold text-xs h-7 py-0 px-1 w-20" onchange="calculateSchedule()">
+                    <input type="time" id="shift-start" class="form-input font-bold text-sm h-9 py-0 px-2 w-24 bg-slate-900" onchange="calculateSchedule()">
                 </div>
                 
-                <div class="flex gap-1">
-                    <button onclick="resetDaily()" class="btn-tiny bg-white border border-slate-200 text-slate-400">Reset</button>
-                    <button onclick="saveDaily()" class="btn-tiny bg-emerald-50 text-emerald-700 border border-emerald-100">Save</button>
-                    <button onclick="addRow()" class="btn-tiny bg-blue-600 text-white shadow-sm shadow-blue-100">+ Job</button>
+                <div class="flex gap-1.5">
+                    <button onclick="resetDaily()" class="btn-tiny bg-slate-700 border border-slate-600 text-slate-300 active:bg-slate-600">Reset</button>
+                    <button onclick="saveDaily()" class="btn-tiny bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 active:bg-emerald-800/50">Save</button>
+                    <button onclick="addRow()" class="btn-tiny bg-blue-600 text-white shadow-lg shadow-blue-900/20 active:bg-blue-500">+ Job</button>
                 </div>
             </div>
 
-            <!-- Quick Add / Search Companies -->
-            <div class="pt-2 border-t border-slate-100">
-                <div class="flex items-center gap-2">
-                    <div class="relative flex-grow">
-                        <input type="text" id="daily-comp-search" placeholder="Search Company to Quick Add..." oninput="renderDailySearch()" class="form-input h-7 text-[10px] pl-7">
-                        <svg class="w-3 h-3 absolute left-2.5 top-2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
+            <div class="pt-2 border-t border-slate-700">
+                <div class="relative">
+                    <input type="text" id="daily-comp-search" placeholder="Search Company to Quick Add..." oninput="renderDailySearch()" class="form-input h-9 text-xs pl-9 bg-slate-900">
+                    <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <div id="daily-search-results" class="hidden mt-2 max-h-32 overflow-y-auto space-y-1 bg-slate-50 p-1 rounded-lg"></div>
+                <div id="daily-search-results" class="hidden mt-2 max-h-48 overflow-y-auto space-y-1.5 bg-slate-900/50 p-1.5 rounded-xl border border-slate-700"></div>
             </div>
         </div>
 
-        <div class="overflow-hidden shadow-sm rounded-xl border border-slate-200 bg-white">
+        <div class="overflow-hidden shadow-2xl rounded-2xl border border-slate-700 bg-slate-800">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr>
-                            <th class="pl-3" style="width: auto;">Job Details</th>
+                            <th class="pl-4" style="width: auto;">Job Details</th>
                             <th class="text-center col-qty">Qty</th>
                             <th class="text-center col-lot">Lot</th>
                             <th class="text-center col-gap">Gap</th>
                             <th class="col-times">Times</th>
-                            <th class="pr-2 w-6"></th>
+                            <th class="pr-3 w-8"></th>
                         </tr>
                     </thead>
                     <tbody id="daily-body" class="row-colors-variety"></tbody>
                 </table>
             </div>
-            <div id="empty-state" class="hidden p-8 text-center">
-                <p class="text-slate-400 text-[10px] font-bold uppercase">No jobs scheduled</p>
+            <div id="empty-state" class="hidden p-12 text-center">
+                <p class="text-slate-500 text-xs font-black uppercase tracking-widest">No jobs scheduled</p>
             </div>
-        </div>
-        
-        <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-slate-900 text-white px-4 py-2 rounded-full shadow-lg z-50 text-[10px] font-black uppercase tracking-widest pointer-events-none">
-            <span id="toast-msg">Saved</span>
         </div>
     </div>
 
-    <!-- SETTINGS -->
+    <!-- MASTER SETTINGS -->
     <div id="content-settings" class="tab-content">
-        <div class="space-y-3">
-            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Register Company</h2>
-                <div class="flex gap-1.5 mb-2">
-                    <input type="text" id="comp-name" placeholder="Company Name" class="form-input h-8">
-                    <button onclick="saveCompany()" class="bg-slate-800 text-white px-4 rounded-lg text-[10px] font-bold">Add</button>
+        <div class="space-y-4">
+            <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Register Company</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="comp-name" placeholder="Company Name" class="form-input h-10 bg-slate-900">
+                    <button onclick="saveCompany()" class="bg-slate-100 text-slate-900 px-5 rounded-xl text-xs font-bold active:bg-white">Add</button>
                 </div>
                 
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-50 rounded-lg">
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Master Company List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <details class="group mt-3" open>
+                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Company List</span>
+                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-                    <ul id="company-list" class="space-y-1 mt-2 p-1"></ul>
+                    <ul id="company-list" class="space-y-1.5 mt-3 px-1"></ul>
                 </details>
             </div>
 
-            <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Register Product</h2>
-                <div class="space-y-1.5 mb-2">
-                    <select id="prod-comp" class="form-input h-8"></select>
-                    <input type="text" id="prod-name" placeholder="Product ID / Name" class="form-input h-8">
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <input type="number" step="0.0001" id="prod-std" placeholder="Std Time" class="form-input h-8">
-                        <input type="number" id="prod-qty" placeholder="Std Qty" class="form-input h-8">
-                        <input type="number" id="prod-gap" placeholder="Gap (min)" class="form-input h-8">
+            <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Register Product</h2>
+                <div class="space-y-2">
+                    <select id="prod-comp" class="form-input h-10 bg-slate-900"></select>
+                    <input type="text" id="prod-name" placeholder="Product ID / Name" class="form-input h-10 bg-slate-900">
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" step="0.0001" id="prod-std" placeholder="Std Time" class="form-input h-10 bg-slate-900">
+                        <input type="number" id="prod-qty" placeholder="Std Qty" class="form-input h-10 bg-slate-900">
+                        <input type="number" id="prod-gap" placeholder="Gap (min)" class="form-input h-10 bg-slate-900">
                     </div>
-                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[10px] font-bold mt-1">Add Product</button>
+                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-3 rounded-xl text-xs font-bold mt-2 shadow-lg shadow-blue-900/20 active:bg-blue-500">Add Product</button>
                 </div>
 
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-50 rounded-lg">
-                        <span class="text-[9px] font-black text-slate-500 uppercase tracking-wider">Master Product List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                <details class="group mt-4">
+                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Product List</span>
+                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-                    <ul id="product-list" class="space-y-1 mt-2 p-1 max-h-48 overflow-y-auto"></ul>
+                    <ul id="product-list" class="space-y-1.5 mt-3 px-1 max-h-64 overflow-y-auto"></ul>
                 </details>
             </div>
         </div>
+    </div>
+
+    <!-- MOBILE EDIT MODAL -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden" onclick="closeModal()"></div>
+    <div id="edit-modal" class="fixed bottom-0 left-0 right-0 rounded-t-3xl p-6 z-50 hidden flex-col shadow-2xl border-t border-slate-700">
+        <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
+        <h3 id="modal-title" class="text-sm font-black text-slate-200 uppercase mb-4 tracking-widest text-center">Edit Entry</h3>
+        <div id="modal-content" class="space-y-4"></div>
+        <div class="flex gap-3 mt-8">
+            <button onclick="closeModal()" class="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700">Cancel</button>
+            <button onclick="confirmEdit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-900/20">Save Changes</button>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-white text-slate-900 px-6 py-2.5 rounded-full shadow-2xl z-50 text-[10px] font-black uppercase tracking-widest pointer-events-none">
+        <span id="toast-msg">Saved</span>
     </div>
 </div>
 
 <script>
+    // Preloaded Company List
+    const PRELOAD_COMPANIES = [
+        "Ashahi", "FUZI SEIRA", "HOKUTO(北斗)", "Katsusika ネジ", "KHAMIDA", 
+        "KOYA-UCHI", "NDN", "TAKAO(高尾)", "Toushou(東証)", "YAMAMOTO(山本)", 
+        "YOSIDA(吉田)", "コーマ(KOMA)", "ゴトウ(GOTOU)", "コバユ(Kobayu)", 
+        "ボーセイ(Boshei)", "ヤサト(Yasato)", "ユーウ(Youu)", "信和(Shinwa)", 
+        "共和(Kyowa)", "前田(Maeda)", "太田(Oota)", "山下(Yamasita)", 
+        "日章(Nissho)", "東京ラセン(Tokyo Rasen)", "東洋(toyo)", 
+        "桂川(ktsuragawa)", "秋山(AKIYAMA)", "藤崎鋲螺(fujisaki)", "赤羽(Akabane)"
+    ];
+
     let companies = JSON.parse(localStorage.getItem('ht_companies')) || [];
     let products = JSON.parse(localStorage.getItem('ht_products')) || [];
     let dailyJobs = JSON.parse(localStorage.getItem('ht_daily_save')) || [];
     let savedStartTime = localStorage.getItem('ht_start_time') || "08:00";
+    
+    let currentEditingType = null;
+    let currentEditingId = null;
 
-    const companyColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#ec4899', '#f97316', '#06b6d4'];
+    // Initialize with preloaded data if empty
+    if (companies.length === 0) {
+        companies = PRELOAD_COMPANIES.map((name, index) => ({
+            id: Date.now() + index,
+            name: name
+        }));
+        companies.sort((a, b) => a.name.localeCompare(b.name));
+        localStorage.setItem('ht_companies', JSON.stringify(companies));
+    }
+
+    // Updated colors for dark mode (slightly brighter/neon to stand out)
+    const companyColors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6', '#fb7185', '#fb923c', '#22d3ee'];
 
     function showToast(msg) {
         const toast = document.getElementById('toast');
@@ -210,42 +268,120 @@
         setTimeout(() => toast.style.opacity = '0', 2000);
     }
 
-    function saveDaily() {
-        const timeInput = document.getElementById('shift-start').value;
-        localStorage.setItem('ht_daily_save', JSON.stringify(dailyJobs));
-        localStorage.setItem('ht_start_time', timeInput);
-        showToast('Saved');
-    }
-
-    function resetDaily() {
-        dailyJobs = [];
-        localStorage.removeItem('ht_daily_save');
-        renderDaily();
-        renderDailySearch();
-        showToast('Cleared');
-    }
-
-    function getCompanyColor(compId) {
-        const index = companies.findIndex(c => c.id == compId);
-        return index !== -1 ? companyColors[index % companyColors.length] : '#e2e8f0';
+    function saveToStorage() {
+        localStorage.setItem('ht_companies', JSON.stringify(companies));
+        localStorage.setItem('ht_products', JSON.stringify(products));
     }
 
     function switchTab(tab) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(`content-${tab}`).classList.add('active');
-        document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm'));
-        document.getElementById(`tab-${tab}`).classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+        document.querySelectorAll('nav button').forEach(btn => {
+            btn.classList.remove('bg-slate-100', 'text-blue-500', 'shadow-sm', 'bg-slate-700', 'text-white');
+            btn.classList.add('text-slate-400');
+        });
+        const activeBtn = document.getElementById(`tab-${tab}`);
+        activeBtn.classList.remove('text-slate-400');
+        activeBtn.classList.add('bg-slate-700', 'text-white');
+
         if(tab === 'settings') renderSettings();
         if(tab === 'daily') { renderDaily(); renderDailySearch(); }
     }
 
+    // --- MODAL EDITING LOGIC ---
+    function toggleModal(show) {
+        const modal = document.getElementById('edit-modal');
+        const overlay = document.getElementById('modal-overlay');
+        if(show) {
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active'), 10);
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        } else {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+            }, 300);
+            document.body.style.overflow = 'auto';
+        }
+    }
+
+    function openEditCompany(id) {
+        const company = companies.find(c => c.id === id);
+        if(!company) return;
+        currentEditingType = 'company';
+        currentEditingId = id;
+        document.getElementById('modal-title').innerText = "Edit Company";
+        document.getElementById('modal-content').innerHTML = `
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-500 uppercase">Company Name</label>
+                <input type="text" id="edit-val-name" value="${company.name}" class="form-input h-12 bg-slate-900">
+            </div>
+        `;
+        toggleModal(true);
+    }
+
+    function openEditProduct(id) {
+        const prod = products.find(p => p.id === id);
+        if(!prod) return;
+        currentEditingType = 'product';
+        currentEditingId = id;
+        document.getElementById('modal-title').innerText = "Edit Product";
+        document.getElementById('modal-content').innerHTML = `
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase">Product Name</label>
+                    <input type="text" id="edit-val-name" value="${prod.name}" class="form-input h-12 bg-slate-900">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Std Time</label>
+                        <input type="number" step="0.0001" id="edit-val-std" value="${prod.std}" class="form-input h-12 bg-slate-900">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Gap (min)</label>
+                        <input type="number" id="edit-val-gap" value="${prod.gap}" class="form-input h-12 bg-slate-900">
+                    </div>
+                </div>
+            </div>
+        `;
+        toggleModal(true);
+    }
+
+    function confirmEdit() {
+        const name = document.getElementById('edit-val-name').value.trim();
+        if(!name) return;
+        
+        if(currentEditingType === 'company') {
+            const index = companies.findIndex(c => c.id === currentEditingId);
+            if(index !== -1) companies[index].name = name;
+        } else if(currentEditingType === 'product') {
+            const std = parseFloat(document.getElementById('edit-val-std').value);
+            const gap = parseInt(document.getElementById('edit-val-gap').value);
+            const index = products.findIndex(p => p.id === currentEditingId);
+            if(index !== -1) {
+                products[index].name = name;
+                products[index].std = std;
+                products[index].gap = gap;
+            }
+        }
+        saveToStorage();
+        renderSettings();
+        closeModal();
+        showToast('Updated');
+    }
+
+    function closeModal() { toggleModal(false); }
+
+    // --- RENDER & LOGIC ---
     function saveCompany() {
         const nameEl = document.getElementById('comp-name');
         const name = nameEl.value.trim();
         if(!name) return;
         companies.push({ id: Date.now(), name });
         companies.sort((a, b) => a.name.localeCompare(b.name));
-        localStorage.setItem('ht_companies', JSON.stringify(companies));
+        saveToStorage();
         nameEl.value = '';
         renderSettings();
     }
@@ -260,129 +396,95 @@
         const compId = parseInt(compEl.value);
         const name = nameEl.value.trim();
         const std = parseFloat(stdEl.value);
-        const qty = parseFloat(qtyEl.value);
         const gap = parseInt(gapEl.value) || 30;
         
         if(!compId || !name || isNaN(std)) return;
-        products.push({ id: Date.now(), compId, name, std, qty, gap });
+        products.push({ id: Date.now(), compId, name, std, qty: parseFloat(qtyEl.value) || 0, gap });
         products.sort((a, b) => a.name.localeCompare(b.name));
-        localStorage.setItem('ht_products', JSON.stringify(products));
+        saveToStorage();
         
-        nameEl.value = '';
-        stdEl.value = '';
-        qtyEl.value = '';
-        gapEl.value = '';
+        nameEl.value = ''; stdEl.value = ''; qtyEl.value = ''; gapEl.value = '';
         renderSettings();
     }
 
-    function renderDailySearch() {
-        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
-        const resultsEl = document.getElementById('daily-search-results');
-        
-        if (!searchVal) {
-            resultsEl.classList.add('hidden');
-            return;
-        }
-
-        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
-        if (filtered.length === 0) {
-            resultsEl.innerHTML = '<p class="text-[9px] text-slate-400 p-2 font-bold italic">No companies found</p>';
-        } else {
-            resultsEl.innerHTML = filtered.map(c => `
-                <div class="flex items-center justify-between bg-white border border-slate-200 rounded p-1.5 shadow-xs">
-                    <div class="flex items-center">
-                        <div class="w-1.5 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                        <span class="text-[10px] font-bold text-slate-700">${c.name}</span>
-                    </div>
-                    <button onclick="addJobByCompany(${c.id})" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter hover:bg-blue-700 transition-colors">Add Job</button>
-                </div>
-            `).join('');
-        }
-        resultsEl.classList.remove('hidden');
+    function getCompanyColor(compId) {
+        const index = companies.findIndex(c => c.id == compId);
+        return index !== -1 ? companyColors[index % companyColors.length] : '#334155';
     }
 
     function renderSettings() {
         document.getElementById('company-list').innerHTML = companies.map(c => `
-            <li class="flex justify-between items-center p-1.5 bg-white border rounded-lg text-[10px] font-bold shadow-sm">
-                <div class="flex items-center">
-                    <div class="w-1.5 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                    <span>${c.name}</span>
+            <li class="flex justify-between items-center p-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
+                <div class="flex items-center flex-grow pl-1">
+                    <div class="w-2 h-4 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
+                    <span class="text-slate-200">${c.name}</span>
                 </div>
-                <button onclick="deleteCompany(${c.id})" class="text-red-300 hover:text-red-500 p-1">
-                    <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="openEditCompany(${c.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button onclick="deleteCompany(${c.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                    </button>
+                </div>
             </li>`).join('');
             
         document.getElementById('product-list').innerHTML = products.map(p => {
             const comp = companies.find(c => c.id == p.compId);
             return `
-            <li class="flex justify-between items-center p-1.5 bg-white border rounded-lg text-[10px] font-bold shadow-sm">
-                <div class="flex flex-col">
-                    <span>${p.name} <span class="text-[8px] text-blue-500 font-normal">(${p.gap}m gap)</span></span>
-                    <span class="text-[8px] text-slate-400 font-normal">${comp ? comp.name : 'Unknown'}</span>
+            <li class="flex justify-between items-center p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
+                <div class="flex flex-col flex-grow pl-1">
+                    <span class="text-slate-100">${p.name}</span>
+                    <span class="text-[9px] text-slate-500 font-normal uppercase tracking-tight">${comp ? comp.name : 'Unknown'} • Std: ${p.std} • Gap: ${p.gap}m</span>
                 </div>
-                <button onclick="deleteProduct(${p.id})" class="text-red-300 hover:text-red-500 p-1">
-                     <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="openEditProduct(${p.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button onclick="deleteProduct(${p.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
+                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                    </button>
+                </div>
             </li>`}).join('');
             
         document.getElementById('prod-comp').innerHTML = '<option value="">Select Company...</option>' + 
             companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     }
 
-    function deleteCompany(id) { 
-        companies = companies.filter(c => c.id !== id); 
-        localStorage.setItem('ht_companies', JSON.stringify(companies)); 
-        renderSettings(); 
-    }
-    function deleteProduct(id) { 
-        products = products.filter(p => p.id !== id); 
-        localStorage.setItem('ht_products', JSON.stringify(products)); 
-        renderSettings(); 
+    function deleteCompany(id) { if(confirm("Delete company?")) { companies = companies.filter(c => c.id !== id); saveToStorage(); renderSettings(); } }
+    function deleteProduct(id) { if(confirm("Delete product?")) { products = products.filter(p => p.id !== id); saveToStorage(); renderSettings(); } }
+
+    // --- DAILY BOARD LOGIC ---
+    function renderDailySearch() {
+        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
+        const resultsEl = document.getElementById('daily-search-results');
+        if (!searchVal) { resultsEl.classList.add('hidden'); return; }
+
+        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
+        resultsEl.innerHTML = filtered.map(c => `
+            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-2 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-1.5 h-4 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
+                    <span class="text-xs font-bold text-slate-200">${c.name}</span>
+                </div>
+                <button onclick="addJobByCompany(${c.id})" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight">Add</button>
+            </div>
+        `).join('') || '<p class="text-center text-[10px] py-2 text-slate-500">No matches</p>';
+        resultsEl.classList.remove('hidden');
     }
 
-    function addRow() {
-        dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 });
-        renderDaily();
-    }
-
-    function addJobByCompany(compId) {
-        dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 30 });
-        document.getElementById('daily-comp-search').value = '';
-        renderDailySearch();
-        calculateSchedule();
-        showToast('Job Added');
-    }
+    function addRow() { dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 }); renderDaily(); }
+    function addJobByCompany(compId) { dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 30 }); document.getElementById('daily-comp-search').value = ''; renderDailySearch(); calculateSchedule(); showToast('Added'); }
 
     function updateJob(index, field, value) {
         const job = dailyJobs[index];
         job[field] = value;
-        if (field === 'compId') {
-            job.prodId = '';
-        }
+        if (field === 'compId') job.prodId = '';
         if (field === 'prodId') {
             const prod = products.find(p => p.id == value);
-            if(prod) {
-                job.qty = prod.qty || 0;
-                job.gap = prod.gap || 30;
-            }
+            if(prod) { job.qty = prod.qty || 0; job.gap = prod.gap || 30; }
         }
         calculateSchedule();
-    }
-
-    function roundTo5(date) {
-        const ms = 1000 * 60 * 5; 
-        return new Date(Math.round(date.getTime() / ms) * ms);
-    }
-
-    function formatDuration(minutes) {
-        if (!minutes || minutes <= 0) return "0m";
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
-        if (h > 0) {
-            return `${h}h${m > 0 ? ` ${m}m` : ''}`;
-        }
-        return `${m}m`;
     }
 
     function calculateSchedule() {
@@ -391,81 +493,73 @@
         const [hours, minutes] = timeValue.split(':');
         let timeline = new Date();
         timeline.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        timeline = roundTo5(timeline);
 
         dailyJobs.forEach((job) => {
             const prod = products.find(p => p.id == job.prodId);
-            job.startTime = roundTo5(new Date(timeline));
+            job.startTime = new Date(timeline);
             let baseDuration = 0;
-            if (prod) {
-                baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
-            }
+            if (prod) baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
             job.durationMinutes = baseDuration;
-            job.endTime = roundTo5(new Date(job.startTime.getTime() + (baseDuration * 60000)));
+            job.endTime = new Date(job.startTime.getTime() + (baseDuration * 60000));
             timeline = new Date(job.endTime.getTime() + ((parseInt(job.gap) || 0) * 60000));
         });
         renderDaily();
     }
 
-    function formatT(date) {
-        if (!date || isNaN(new Date(date).getTime())) return "--:--";
-        const d = new Date(date);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    }
+    function formatT(date) { return date ? new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : "--:--"; }
+    function formatDuration(min) { return min > 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; }
 
     function renderDaily() {
         const tbody = document.getElementById('daily-body');
-        const emptyState = document.getElementById('empty-state');
-        if (dailyJobs.length === 0) { tbody.innerHTML = ''; emptyState.classList.remove('hidden'); return; }
-        emptyState.classList.add('hidden');
+        if (dailyJobs.length === 0) { tbody.innerHTML = ''; document.getElementById('empty-state').classList.remove('hidden'); return; }
+        document.getElementById('empty-state').classList.add('hidden');
 
         tbody.innerHTML = dailyJobs.map((job, idx) => {
             const filteredProds = products.filter(p => p.compId == job.compId);
             return `
-            <tr>
-                <td class="pl-3 py-3">
+            <tr class="border-b border-slate-700/50">
+                <td class="pl-4 py-3">
                     <div class="flex items-center">
                         <div class="company-pill" style="background-color: ${getCompanyColor(job.compId)}"></div>
                         <div class="min-w-0">
-                            <select onchange="updateJob(${idx}, 'compId', this.value)" class="form-input text-[11px] font-black border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name">
-                                <option value="">Company...</option>
-                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                            <select onchange="updateJob(${idx}, 'compId', this.value)" class="form-input text-[11px] font-black border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none text-slate-100">
+                                <option value="" class="bg-slate-800">Company...</option>
+                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''} class="bg-slate-800">${c.name}</option>`).join('')}
                             </select>
-                            <select onchange="updateJob(${idx}, 'prodId', this.value)" class="form-input text-[10px] text-slate-500 font-bold border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name mt-0.5">
-                                <option value="">Product...</option>
-                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                            <select onchange="updateJob(${idx}, 'prodId', this.value)" class="form-input text-[10px] text-slate-400 font-bold border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none">
+                                <option value="" class="bg-slate-800">Product...</option>
+                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''} class="bg-slate-800">${p.name}</option>`).join('')}
                             </select>
                         </div>
                     </div>
                 </td>
                 <td class="text-center col-qty">
-                    <input type="number" value="${job.qty}" onchange="updateJob(${idx}, 'qty', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-7">
+                    <input type="number" value="${job.qty}" onchange="updateJob(${idx}, 'qty', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
                 </td>
                 <td class="text-center col-lot">
-                    <input type="number" value="${job.lot}" onchange="updateJob(${idx}, 'lot', this.value)" class="form-input text-[10px] w-8 text-center font-bold p-0.5 h-7">
+                    <input type="number" value="${job.lot}" onchange="updateJob(${idx}, 'lot', this.value)" class="form-input text-xs w-9 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
                 </td>
                 <td class="text-center col-gap">
-                    <input type="number" value="${job.gap}" onchange="updateJob(${idx}, 'gap', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-7">
+                    <input type="number" value="${job.gap}" onchange="updateJob(${idx}, 'gap', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
                 </td>
                 <td class="col-times">
                     <div class="flex flex-col leading-none">
-                        <span class="text-blue-600 time-badge text-[10px] font-black">${formatT(job.startTime)}</span>
-                        <div class="flex items-center gap-0.5 my-1">
-                            <div class="h-[1px] flex-grow bg-slate-200"></div>
-                            <span class="text-[7px] font-black text-slate-500 uppercase whitespace-nowrap">${formatDuration(job.durationMinutes)}</span>
-                            <div class="h-[1px] flex-grow bg-slate-200"></div>
-                        </div>
-                        <span class="text-emerald-600 time-badge text-[10px] font-black">${formatT(job.endTime)}</span>
+                        <span class="text-blue-400 time-badge text-[10px]">${formatT(job.startTime)}</span>
+                        <span class="text-[7px] font-black text-slate-500 py-0.5 uppercase">${formatDuration(job.durationMinutes)}</span>
+                        <span class="text-emerald-400 time-badge text-[10px]">${formatT(job.endTime)}</span>
                     </div>
                 </td>
-                <td class="pr-2 text-right">
-                    <button onclick="dailyJobs.splice(${idx}, 1); calculateSchedule();" class="text-slate-300 hover:text-red-400">
+                <td class="pr-3 text-right">
+                    <button onclick="dailyJobs.splice(${idx}, 1); calculateSchedule();" class="p-2 text-slate-600 active:text-red-500 transition-colors">
                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
                     </button>
                 </td>
             </tr>`;
         }).join('');
     }
+
+    function saveDaily() { localStorage.setItem('ht_daily_save', JSON.stringify(dailyJobs)); localStorage.setItem('ht_start_time', document.getElementById('shift-start').value); showToast('Daily Saved'); }
+    function resetDaily() { if(confirm("Clear daily?")) { dailyJobs = []; localStorage.removeItem('ht_daily_save'); renderDaily(); showToast('Cleared'); } }
 
     window.onload = () => {
         document.getElementById('shift-start').value = savedStartTime;
