@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HT Production Scheduler - Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
-           :root { 
+    <style>
+        :root { 
             --primary: #3b82f6; 
             --bg-main: #0f172a;
             --bg-card: #1e293b;
@@ -90,9 +91,6 @@
             max-width: 110px;
         }
 
-        details summary::-webkit-details-marker { display:none; }
-        details summary { list-style: none; }
-        
         #edit-modal {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(100%);
@@ -104,13 +102,6 @@
 
         .row-colors-variety tr:nth-child(odd) { background-color: rgba(255, 255, 255, 0.02); }
         .row-colors-variety tr:hover { background-color: rgba(255, 255, 255, 0.05); }
-
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-
-        select { color-scheme: dark; }
 
         /* Sync Indicator */
         #sync-status {
@@ -126,6 +117,11 @@
         }
         .status-online { background: #065f46; color: #34d399; }
         .status-offline { background: #7f1d1d; color: #f87171; }
+        
+        /* Modal Overlay */
+        #modal-overlay {
+            transition: opacity 0.3s ease;
+        }
     </style>
 </head>
 <body class="p-2 md:p-4 pb-20">
@@ -146,15 +142,9 @@
             </div>
             
             <div class="flex items-center gap-1.5">
-                <a href="#" class="nav-util-btn" title="Overtime">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </a>
-                <a href="#" class="nav-util-btn" title="Calculator">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                </a>
-                <a href="#" class="nav-util-btn" title="Time Log">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </a>
+                <div class="nav-util-btn" title="Cloud Active">
+                    <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20"><path d="M5.5 13a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 13H5.5z" /></svg>
+                </div>
             </div>
         </div>
 
@@ -219,14 +209,7 @@
                     <input type="text" id="comp-name" placeholder="Company Name" class="form-input h-10 bg-slate-900">
                     <button onclick="window.saveCompany()" class="bg-slate-100 text-slate-900 px-5 rounded-xl text-xs font-bold active:bg-white">Add</button>
                 </div>
-                
-                <details class="group mt-3" open>
-                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Company List</span>
-                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <ul id="company-list" class="space-y-1.5 mt-3 px-1"></ul>
-                </details>
+                <ul id="company-list" class="space-y-1.5 mt-4"></ul>
             </div>
 
             <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
@@ -241,55 +224,41 @@
                     </div>
                     <button onclick="window.saveProduct()" class="w-full bg-blue-600 text-white py-3 rounded-xl text-xs font-bold mt-2 shadow-lg shadow-blue-900/20 active:bg-blue-500">Add Product</button>
                 </div>
-
-                <details class="group mt-4">
-                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Product List</span>
-                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <ul id="product-list" class="space-y-1.5 mt-3 px-1 max-h-64 overflow-y-auto"></ul>
-                </details>
+                <ul id="product-list" class="space-y-1.5 mt-4 max-h-64 overflow-y-auto"></ul>
             </div>
         </div>
     </div>
 
     <!-- MOBILE EDIT MODAL -->
-    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden" onclick="window.closeModal()"></div>
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden opacity-0" onclick="window.closeModal()"></div>
     <div id="edit-modal" class="fixed bottom-0 left-0 right-0 rounded-t-3xl p-6 z-50 hidden flex-col shadow-2xl border-t border-slate-700">
         <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
-        <h3 id="modal-title" class="text-sm font-black text-slate-200 uppercase mb-4 tracking-widest text-center">Edit Entry</h3>
+        <h3 id="modal-title" class="text-sm font-black text-slate-200 uppercase mb-4 tracking-widest text-center">Edit</h3>
         <div id="modal-content" class="space-y-4"></div>
         <div class="flex gap-3 mt-8">
             <button onclick="window.closeModal()" class="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700">Cancel</button>
-            <button onclick="window.confirmEdit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-900/20">Save Changes</button>
+            <button onclick="window.confirmEdit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-900/20">Save</button>
         </div>
     </div>
 
-    <!-- TOAST NOTIFICATION -->
+    <!-- TOAST -->
     <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-white text-slate-900 px-6 py-2.5 rounded-full shadow-2xl z-50 text-[10px] font-black uppercase tracking-widest pointer-events-none">
         <span id="toast-msg">Saved</span>
     </div>
 </div>
 
 <script type="module">
+    // --- Modular Firebase Imports (Essential for GitHub Pages / Production) ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // --- Firebase Setup ---
-    const firebaseConfig = {
-  apiKey: "AIzaSyAZOE523GxKO5GEfcOG4mtzLjLVWwUjQd4",
-  authDomain: "studio-3408081843-c2b8e.firebaseapp.com",
-  projectId: "studio-3408081843-c2b8e",
-  storageBucket: "studio-3408081843-c2b8e.firebasestorage.app",
-  messagingSenderId: "39162715432",
-  appId: "1:39162715432:web:2564eafdff10947716041d"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const appId = "ht-scheduler-pro";
+    // --- Configuration ---
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ht-scheduler-pro';
 
     let currentUser = null;
     let companies = [];
@@ -310,8 +279,7 @@ const appId = "ht-scheduler-pro";
 
     const companyColors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6', '#fb7185', '#fb923c', '#22d3ee'];
 
-    // --- Core Logic Functions (Exposed to window) ---
-
+    // --- Toast & UI ---
     window.showToast = (msg) => {
         const toast = document.getElementById('toast');
         document.getElementById('toast-msg').innerText = msg;
@@ -322,70 +290,43 @@ const appId = "ht-scheduler-pro";
     window.switchTab = (tab) => {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(`content-${tab}`).classList.add('active');
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-slate-700', 'text-white');
-            btn.classList.add('text-slate-400');
-        });
-        const activeBtn = document.getElementById(`tab-${tab}`);
-        activeBtn.classList.remove('text-slate-400');
-        activeBtn.classList.add('bg-slate-700', 'text-white');
-
+        document.querySelectorAll('nav button').forEach(btn => btn.className = "flex-1 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider text-slate-400");
+        document.getElementById(`tab-${tab}`).className = "flex-1 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider bg-slate-700 text-white";
         if(tab === 'settings') window.renderSettings();
         if(tab === 'daily') { window.renderDaily(); window.renderDailySearch(); }
     };
 
+    // --- State Actions ---
     window.saveCompany = async () => {
-        const nameEl = document.getElementById('comp-name');
-        const name = nameEl.value.trim();
+        const name = document.getElementById('comp-name').value.trim();
         if(!name || !currentUser) return;
         companies.push({ id: Date.now(), name });
         companies.sort((a, b) => a.name.localeCompare(b.name));
-        nameEl.value = '';
+        document.getElementById('comp-name').value = '';
         await saveToCloud();
         window.renderSettings();
     };
 
     window.saveProduct = async () => {
-        const compEl = document.getElementById('prod-comp');
-        const nameEl = document.getElementById('prod-name');
-        const stdEl = document.getElementById('prod-std');
-        const qtyEl = document.getElementById('prod-qty');
-        const gapEl = document.getElementById('prod-gap');
-        
-        const compId = parseInt(compEl.value);
-        const name = nameEl.value.trim();
-        const std = parseFloat(stdEl.value);
-        const gap = parseInt(gapEl.value) || 30;
-        
+        const compId = parseInt(document.getElementById('prod-comp').value);
+        const name = document.getElementById('prod-name').value.trim();
+        const std = parseFloat(document.getElementById('prod-std').value);
         if(!compId || !name || isNaN(std) || !currentUser) return;
-        products.push({ id: Date.now(), compId, name, std, qty: parseFloat(qtyEl.value) || 0, gap });
+        products.push({ 
+            id: Date.now(), compId, name, std, 
+            qty: parseFloat(document.getElementById('prod-qty').value) || 0, 
+            gap: parseInt(document.getElementById('prod-gap').value) || 30 
+        });
         products.sort((a, b) => a.name.localeCompare(b.name));
-        
-        nameEl.value = ''; stdEl.value = ''; qtyEl.value = ''; gapEl.value = '';
+        document.getElementById('prod-name').value = '';
         await saveToCloud();
         window.renderSettings();
     };
 
-    window.deleteCompany = async (id) => {
-        if(confirm("Delete company?")) {
-            companies = companies.filter(c => c.id !== id);
-            await saveToCloud();
-            window.renderSettings();
-        }
-    };
-
-    window.deleteProduct = async (id) => {
-        if(confirm("Delete product?")) {
-            products = products.filter(p => p.id !== id);
-            await saveToCloud();
-            window.renderSettings();
-        }
-    };
-
-    window.addRow = () => {
-        dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 });
-        window.renderDaily();
-    };
+    window.deleteCompany = async (id) => { companies = companies.filter(c => c.id !== id); await saveToCloud(); window.renderSettings(); };
+    window.deleteProduct = async (id) => { products = products.filter(p => p.id !== id); await saveToCloud(); window.renderSettings(); };
+    
+    window.addRow = () => { dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 }); window.renderDaily(); };
 
     window.updateJob = (index, field, value) => {
         const job = dailyJobs[index];
@@ -399,9 +340,7 @@ const appId = "ht-scheduler-pro";
     };
 
     window.calculateSchedule = () => {
-        const timeValue = document.getElementById('shift-start').value;
-        if (!timeValue) return;
-        
+        const timeValue = document.getElementById('shift-start').value || "08:00";
         const [hours, minutes] = timeValue.split(':');
         let timeline = new Date();
         timeline.setHours(parseInt(hours), parseInt(minutes), 0, 0);
@@ -410,9 +349,7 @@ const appId = "ht-scheduler-pro";
             const prod = products.find(p => p.id == job.prodId);
             job.startTime = timeline.toISOString();
             let baseDuration = 0;
-            if (prod) {
-                baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
-            }
+            if (prod) baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
             job.durationMinutes = baseDuration;
             const end = new Date(new Date(job.startTime).getTime() + (baseDuration * 60000));
             job.endTime = end.toISOString();
@@ -421,306 +358,152 @@ const appId = "ht-scheduler-pro";
         window.renderDaily();
     };
 
-    window.resetDaily = () => {
-        if(confirm("Clear current schedule?")) {
-            dailyJobs = [];
-            window.renderDaily();
-        }
-    };
+    window.resetDaily = () => { if(confirm("Clear?")) { dailyJobs = []; window.renderDaily(); } };
+    window.saveDailyToCloud = async () => { await saveToCloud(); window.showToast("Sync Successful"); };
 
-    window.saveDailyToCloud = async () => {
-        if(!currentUser) return;
-        await saveToCloud();
-        window.showToast("Cloud Saved");
-    };
-
-    // --- UI Rendering ---
-
+    // --- Rendering ---
     window.getCompanyColor = (compId) => {
-        const index = companies.findIndex(c => c.id == compId);
-        return index !== -1 ? companyColors[index % companyColors.length] : '#334155';
+        const idx = companies.findIndex(c => c.id == compId);
+        return idx !== -1 ? companyColors[idx % companyColors.length] : '#334155';
     };
 
     window.renderSettings = () => {
         document.getElementById('company-list').innerHTML = companies.map(c => `
-            <li class="flex justify-between items-center p-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
-                <div class="flex items-center flex-grow pl-1">
-                    <div class="w-2 h-4 rounded-full mr-2" style="background-color: ${window.getCompanyColor(c.id)}"></div>
-                    <span class="text-slate-200">${c.name}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.openEditCompany(${c.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                    <button onclick="window.deleteCompany(${c.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
-                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                    </button>
+            <li class="flex justify-between items-center p-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold">
+                <div class="flex items-center"><div class="w-1.5 h-4 rounded-full mr-2" style="background-color: ${window.getCompanyColor(c.id)}"></div><span class="text-slate-200">${c.name}</span></div>
+                <div class="flex gap-2">
+                    <button onclick="window.openEditCompany(${c.id})" class="p-2 bg-slate-700 text-blue-400 rounded-lg">Edit</button>
+                    <button onclick="window.deleteCompany(${c.id})" class="p-2 bg-slate-700 text-red-400 rounded-lg">Del</button>
                 </div>
             </li>`).join('');
             
         document.getElementById('product-list').innerHTML = products.map(p => {
             const comp = companies.find(c => c.id == p.compId);
-            return `
-            <li class="flex justify-between items-center p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
-                <div class="flex flex-col flex-grow pl-1">
-                    <span class="text-slate-100">${p.name}</span>
-                    <span class="text-[9px] text-slate-500 font-normal uppercase tracking-tight">${comp ? comp.name : 'Unknown'} • Std: ${p.std} • Gap: ${p.gap}m</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="window.openEditProduct(${p.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                    </button>
-                    <button onclick="window.deleteProduct(${p.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
-                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                    </button>
+            return `<li class="flex justify-between items-center p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold">
+                <div class="flex flex-col"><span class="text-slate-100">${p.name}</span><span class="text-[9px] text-slate-500">${comp?.name || '??'} • ${p.std}</span></div>
+                <div class="flex gap-2">
+                    <button onclick="window.openEditProduct(${p.id})" class="p-2 bg-slate-700 text-blue-400 rounded-lg">Edit</button>
+                    <button onclick="window.deleteProduct(${p.id})" class="p-2 bg-slate-700 text-red-400 rounded-lg">Del</button>
                 </div>
             </li>`}).join('');
             
-        document.getElementById('prod-comp').innerHTML = '<option value="">Select Company...</option>' + 
-            companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        document.getElementById('prod-comp').innerHTML = '<option value="">Company...</option>' + companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
     };
 
     window.renderDailySearch = () => {
-        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
-        const resultsEl = document.getElementById('daily-search-results');
-        if (!searchVal) { resultsEl.classList.add('hidden'); return; }
-        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
-        resultsEl.innerHTML = filtered.map(c => `
-            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-2 shadow-sm">
-                <div class="flex items-center">
-                    <div class="w-1.5 h-4 rounded-full mr-2" style="background-color: ${window.getCompanyColor(c.id)}"></div>
-                    <span class="text-xs font-bold text-slate-200">${c.name}</span>
-                </div>
-                <button onclick="window.addJobByCompany(${c.id})" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight">Add</button>
-            </div>
-        `).join('') || '<p class="text-center text-[10px] py-2 text-slate-500">No matches</p>';
-        resultsEl.classList.remove('hidden');
+        const search = document.getElementById('daily-comp-search').value.toLowerCase();
+        const results = document.getElementById('daily-search-results');
+        if (!search) { results.classList.add('hidden'); return; }
+        results.innerHTML = companies.filter(c => c.name.toLowerCase().includes(search)).map(c => `
+            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-2">
+                <span class="text-xs font-bold text-slate-200">${c.name}</span>
+                <button onclick="window.addJobByCompany(${c.id})" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black">Add</button>
+            </div>`).join('') || '<p class="text-center text-[10px] py-2">No matches</p>';
+        results.classList.remove('hidden');
     };
 
-    window.addJobByCompany = (compId) => { 
-        dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 30 }); 
-        document.getElementById('daily-comp-search').value = ''; 
-        window.renderDailySearch(); 
-        window.calculateSchedule(); 
-        window.showToast('Added'); 
-    };
-
-    const formatT = (dateStr) => { 
-        if(!dateStr) return "--:--";
-        const date = new Date(dateStr);
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); 
-    };
-    
-    const formatDuration = (min) => { 
-        return min >= 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; 
-    };
+    window.addJobByCompany = (compId) => { dailyJobs.push({ compId, prodId: '', qty: 0, lot: 1, gap: 30 }); document.getElementById('daily-comp-search').value = ''; window.renderDailySearch(); window.calculateSchedule(); };
 
     window.renderDaily = () => {
         const tbody = document.getElementById('daily-body');
-        if (dailyJobs.length === 0) { 
-            tbody.innerHTML = ''; 
-            document.getElementById('empty-state').classList.remove('hidden'); 
-            return; 
-        }
+        if (dailyJobs.length === 0) { tbody.innerHTML = ''; document.getElementById('empty-state').classList.remove('hidden'); return; }
         document.getElementById('empty-state').classList.add('hidden');
         
         tbody.innerHTML = dailyJobs.map((job, idx) => {
             const filteredProds = products.filter(p => p.compId == job.compId);
-            return `
-            <tr class="border-b border-slate-700/50">
-                <td class="pl-4 py-3">
-                    <div class="flex items-center">
-                        <div class="company-pill" style="background-color: ${window.getCompanyColor(job.compId)}"></div>
-                        <div class="min-w-0">
-                            <select onchange="window.updateJob(${idx}, 'compId', this.value)" class="form-input text-[11px] font-black border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none text-slate-100">
-                                <option value="" class="bg-slate-800">Company...</option>
-                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''} class="bg-slate-800">${c.name}</option>`).join('')}
-                            </select>
-                            <select onchange="window.updateJob(${idx}, 'prodId', this.value)" class="form-input text-[10px] text-slate-400 font-bold border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none">
-                                <option value="" class="bg-slate-800">Product...</option>
-                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''} class="bg-slate-800">${p.name}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                </td>
-                <td class="text-center col-qty">
-                    <input type="number" value="${job.qty}" onchange="window.updateJob(${idx}, 'qty', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
-                </td>
-                <td class="text-center col-lot">
-                    <input type="number" value="${job.lot}" onchange="window.updateJob(${idx}, 'lot', this.value)" class="form-input text-xs w-9 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
-                </td>
-                <td class="text-center col-gap">
-                    <input type="number" value="${job.gap}" onchange="window.updateJob(${idx}, 'gap', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
-                </td>
-                <td class="col-times">
-                    <div class="flex flex-col leading-none">
-                        <span class="text-blue-400 time-badge text-[10px]">${formatT(job.startTime)}</span>
-                        <span class="text-[7px] font-black text-slate-500 py-0.5 uppercase">${formatDuration(job.durationMinutes)}</span>
-                        <span class="text-emerald-400 time-badge text-[10px]">${formatT(job.endTime)}</span>
-                    </div>
-                </td>
-                <td class="pr-3 text-right">
-                    <button onclick="dailyJobs.splice(${idx}, 1); window.calculateSchedule();" class="p-2 text-slate-600 active:text-red-500 transition-colors">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </td>
+            return `<tr class="border-b border-slate-700/50">
+                <td class="pl-4 py-3"><div class="flex items-center"><div class="company-pill" style="background-color: ${window.getCompanyColor(job.compId)}"></div>
+                    <div class="min-w-0">
+                        <select onchange="window.updateJob(${idx}, 'compId', this.value)" class="form-input text-[11px] font-black border-none p-0 h-4 bg-transparent appearance-none">
+                            <option value="">Company...</option>${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        </select>
+                        <select onchange="window.updateJob(${idx}, 'prodId', this.value)" class="form-input text-[10px] text-slate-400 font-bold border-none p-0 h-4 bg-transparent appearance-none">
+                            <option value="">Product...</option>${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''}>${p.name}</option>`).join('')}
+                        </select>
+                    </div></div></td>
+                <td><input type="number" value="${job.qty}" onchange="window.updateJob(${idx}, 'qty', this.value)" class="form-input text-xs text-center p-1 bg-slate-900"></td>
+                <td><input type="number" value="${job.lot}" onchange="window.updateJob(${idx}, 'lot', this.value)" class="form-input text-xs text-center p-1 bg-slate-900"></td>
+                <td><input type="number" value="${job.gap}" onchange="window.updateJob(${idx}, 'gap', this.value)" class="form-input text-xs text-center p-1 bg-slate-900"></td>
+                <td><div class="flex flex-col text-[10px] font-black"><span class="text-blue-400">${new Date(job.startTime||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false})}</span><span class="text-emerald-400">${new Date(job.endTime||0).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',hour12:false})}</span></div></td>
+                <td class="pr-3 text-right"><button onclick="dailyJobs.splice(${idx}, 1); window.calculateSchedule();" class="text-slate-600">×</button></td>
             </tr>`;
         }).join('');
     };
 
-    // --- Modal Editing Functions ---
-
+    // --- Modals ---
     window.openEditCompany = (id) => {
-        const company = companies.find(c => c.id === id);
-        if(!company) return;
-        currentEditingType = 'company';
-        currentEditingId = id;
-        document.getElementById('modal-title').innerText = "Edit Company";
-        document.getElementById('modal-content').innerHTML = `
-            <div class="space-y-1">
-                <label class="text-[10px] font-black text-slate-500 uppercase">Company Name</label>
-                <input type="text" id="edit-val-name" value="${company.name}" class="form-input h-12 bg-slate-900">
-            </div>
-        `;
+        const c = companies.find(c => c.id === id);
+        currentEditingType = 'company'; currentEditingId = id;
+        document.getElementById('modal-content').innerHTML = `<input type="text" id="edit-val-name" value="${c.name}" class="form-input h-12 bg-slate-900">`;
         toggleModal(true);
     };
 
     window.openEditProduct = (id) => {
-        const prod = products.find(p => p.id === id);
-        if(!prod) return;
-        currentEditingType = 'product';
-        currentEditingId = id;
-        document.getElementById('modal-title').innerText = "Edit Product";
-        document.getElementById('modal-content').innerHTML = `
-            <div class="space-y-3">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-black text-slate-500 uppercase">Product Name</label>
-                    <input type="text" id="edit-val-name" value="${prod.name}" class="form-input h-12 bg-slate-900">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-500 uppercase">Std Time</label>
-                        <input type="number" step="0.0001" id="edit-val-std" value="${prod.std}" class="form-input h-12 bg-slate-900">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-black text-slate-500 uppercase">Gap (min)</label>
-                        <input type="number" id="edit-val-gap" value="${prod.gap}" class="form-input h-12 bg-slate-900">
-                    </div>
-                </div>
-            </div>
-        `;
+        const p = products.find(p => p.id === id);
+        currentEditingType = 'product'; currentEditingId = id;
+        document.getElementById('modal-content').innerHTML = `<input type="text" id="edit-val-name" value="${p.name}" class="form-input mb-3 h-12 bg-slate-900"><input type="number" step="0.0001" id="edit-val-std" value="${p.std}" class="form-input h-12 bg-slate-900">`;
         toggleModal(true);
     };
 
     window.confirmEdit = async () => {
         const name = document.getElementById('edit-val-name').value.trim();
-        if(!name) return;
-        if(currentEditingType === 'company') {
-            const index = companies.findIndex(c => c.id === currentEditingId);
-            if(index !== -1) companies[index].name = name;
-        } else if(currentEditingType === 'product') {
-            const std = parseFloat(document.getElementById('edit-val-std').value);
-            const gap = parseInt(document.getElementById('edit-val-gap').value);
-            const index = products.findIndex(p => p.id === currentEditingId);
-            if(index !== -1) {
-                products[index].name = name;
-                products[index].std = std;
-                products[index].gap = gap;
-            }
+        if(currentEditingType === 'company') companies.find(c => c.id === currentEditingId).name = name;
+        if(currentEditingType === 'product') {
+            const p = products.find(p => p.id === currentEditingId);
+            p.name = name; p.std = parseFloat(document.getElementById('edit-val-std').value);
         }
-        await saveToCloud();
-        window.renderSettings();
-        window.closeModal();
-        window.showToast('Updated');
+        await saveToCloud(); window.renderSettings(); window.closeModal();
     };
 
     const toggleModal = (show) => {
-        const modal = document.getElementById('edit-modal');
-        const overlay = document.getElementById('modal-overlay');
-        if(show) {
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.add('active'), 10);
-            overlay.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        } else {
-            modal.classList.remove('active');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                overlay.classList.add('hidden');
-            }, 300);
-            document.body.style.overflow = 'auto';
-        }
+        const m = document.getElementById('edit-modal'); const o = document.getElementById('modal-overlay');
+        if(show) { m.classList.remove('hidden'); o.classList.remove('hidden'); setTimeout(() => { m.classList.add('active'); o.classList.add('opacity-100'); }, 10); }
+        else { m.classList.remove('active'); o.classList.remove('opacity-100'); setTimeout(() => { m.classList.add('hidden'); o.classList.add('hidden'); }, 300); }
     };
-
     window.closeModal = () => toggleModal(false);
 
-    // --- Firebase Sync Logic ---
-
+    // --- Firebase Core Logic ---
     const saveToCloud = async () => {
         if (!currentUser) return;
         try {
             const userDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'appData', 'master');
-            await setDoc(userDoc, {
-                companies,
-                products,
-                dailyJobs,
-                startTime: document.getElementById('shift-start').value || "08:00",
-                updatedAt: new Date().toISOString()
-            }, { merge: true });
-        } catch (e) {
-            console.error("Cloud save failed", e);
-        }
+            await setDoc(userDoc, { companies, products, dailyJobs, updatedAt: new Date().toISOString() }, { merge: true });
+        } catch (e) { console.error(e); }
     };
 
     const initAuth = async () => {
-    try {
-        await signInAnonymously(auth);
-    } catch (e) {
-        console.error("Auth failed", e);
-    }
-};
-
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) { console.error("Auth Failure:", e); }
+    };
 
     onAuthStateChanged(auth, async (user) => {
         const statusEl = document.getElementById('sync-status');
         if (user) {
             currentUser = user;
-            statusEl.innerText = "ONLINE";
-            statusEl.className = "status-online";
-            
-            // Load initial data
-            const userDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'master');
-            const snap = await getDoc(userDoc);
-            
+            statusEl.innerText = "ONLINE"; statusEl.className = "status-online";
+            const snap = await getDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'master'));
             if (snap.exists()) {
-                const data = snap.data();
-                companies = data.companies || [];
-                products = data.products || [];
-                dailyJobs = data.dailyJobs || [];
-                document.getElementById('shift-start').value = data.startTime || "08:00";
+                const d = snap.data();
+                companies = d.companies || []; products = d.products || []; dailyJobs = d.dailyJobs || [];
             } else {
-                // First time user: Init with preloads
-                companies = PRELOAD_COMPANIES.map((name, index) => ({
-                    id: Date.now() + index,
-                    name: name
-                }));
-                companies.sort((a, b) => a.name.localeCompare(b.name));
+                companies = PRELOAD_COMPANIES.map((name, i) => ({ id: Date.now() + i, name }));
                 await saveToCloud();
             }
-            
-            window.renderDaily();
-            window.renderSettings();
+            window.renderDaily(); window.renderSettings();
         } else {
-            statusEl.innerText = "OFFLINE";
-            statusEl.className = "status-offline";
+            statusEl.innerText = "OFFLINE"; statusEl.className = "status-offline";
         }
+    }, (err) => {
+        console.error("Auth Listener Error:", err);
+        document.getElementById('sync-status').innerText = "ERROR";
     });
 
-    // Start everything
     initAuth();
-
 </script>
 </body>
 </html>
-
-
