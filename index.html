@@ -5,12 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>HT Production Scheduler - Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
-    <style>
-        :root { 
+           :root { 
             --primary: #3b82f6; 
             --bg-main: #0f172a;
             --bg-card: #1e293b;
@@ -282,11 +277,19 @@
     import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Firebase Setup ---
-    const firebaseConfig = JSON.parse(__firebase_config);
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ht-scheduler-pro';
+    const firebaseConfig = {
+  apiKey: "XXXX",
+  authDomain: "XXXX.firebaseapp.com",
+  projectId: "XXXX",
+  storageBucket: "XXXX.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = "ht-scheduler-pro";
 
     let currentUser = null;
     let companies = [];
@@ -670,16 +673,13 @@
     };
 
     const initAuth = async () => {
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
-                await signInAnonymously(auth);
-            }
-        } catch (e) {
-            console.error("Auth failed", e);
-        }
-    };
+    try {
+        await signInAnonymously(auth);
+    } catch (e) {
+        console.error("Auth failed", e);
+    }
+};
+
 
     onAuthStateChanged(auth, async (user) => {
         const statusEl = document.getElementById('sync-status');
@@ -722,3 +722,4 @@
 </script>
 </body>
 </html>
+
