@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HT Production Scheduler</title>
+    <title>HT Production Scheduler - Online</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
     <style>
         :root { 
             --primary: #3b82f6; 
@@ -40,14 +44,14 @@
         th { 
             background: #1e293b; 
             color: #64748b; 
-            padding: 0.4rem 0.25rem; 
-            font-size: 0.55rem; 
+            padding: 0.5rem 0.25rem; 
+            font-size: 0.6rem; 
             text-transform: uppercase; 
             letter-spacing: 0.05em; 
             font-weight: 800;
             border-bottom: 1px solid var(--border-color);
         }
-        td { padding: 0.4rem 0.25rem; }
+        td { padding: 0.5rem 0.25rem; }
         
         .time-badge { 
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
@@ -55,22 +59,21 @@
             letter-spacing: -0.05em;
         }
         
-        .company-pill { height: 1.6rem; width: 3px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
+        .company-pill { height: 1.8rem; width: 4px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
         
         .btn-tiny {
-            padding: 0.35rem 0.5rem;
-            font-size: 0.7rem;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.75rem;
             font-weight: 800;
-            border-radius: 0.4rem;
+            border-radius: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.25rem;
         }
 
         .nav-util-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            padding: 0.6rem;
+            border-radius: 0.75rem;
             background: #1e293b;
             border: 1px solid #334155;
             color: #94a3b8;
@@ -89,88 +92,113 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 100px;
+            max-width: 110px;
         }
 
+        details summary::-webkit-details-marker { display:none; }
+        details summary { list-style: none; }
+        
         #edit-modal {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateY(100%);
             background-color: #1e293b;
         }
-        #edit-modal.active { transform: translateY(0); }
+        #edit-modal.active {
+            transform: translateY(0);
+        }
 
         .row-colors-variety tr:nth-child(odd) { background-color: rgba(255, 255, 255, 0.02); }
         .row-colors-variety tr:hover { background-color: rgba(255, 255, 255, 0.05); }
 
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
         select { color-scheme: dark; }
+
+        /* Sync Indicator */
+        #sync-status {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            font-size: 8px;
+            text-transform: uppercase;
+            font-weight: 900;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 100;
+        }
+        .status-online { background: #065f46; color: #34d399; }
+        .status-offline { background: #7f1d1d; color: #f87171; }
     </style>
 </head>
-<body class="p-2 pb-20">
+<body class="p-2 md:p-4 pb-20">
+
+<div id="sync-status" class="status-offline">Connecting...</div>
 
 <div class="max-w-3xl mx-auto">
-    <!-- Slim Header (20% reduction in vertical space) -->
-    <header class="mb-3">
-        <div class="flex flex-row justify-between items-center px-1 mb-2">
+    <!-- Compact Header -->
+    <header class="mb-4 space-y-3">
+        <div class="flex flex-row justify-between items-center px-1">
             <div class="flex items-center gap-1.5">
-                <div class="bg-blue-600 p-1 rounded-md">
+                <div class="bg-blue-600 p-1.5 rounded-lg shadow-lg shadow-blue-900/20">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                 </div>
-                <h1 class="text-sm font-black text-slate-100 tracking-tighter uppercase">HT Scheduler</h1>
+                <h1 class="text-base font-black text-slate-100 tracking-tighter">HT ONLINE</h1>
             </div>
             
             <div class="flex items-center gap-1.5">
-                <a href="OT.html" class="nav-util-btn" title="Overtime">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <a href="#" class="nav-util-btn" title="Overtime">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 </a>
-                <a href="CALC.html" class="nav-util-btn" title="Calculator">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                <a href="#" class="nav-util-btn" title="Calculator">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
                 </a>
-                <a href="TIME.html" class="nav-util-btn" title="Time Log">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <a href="#" class="nav-util-btn" title="Time Log">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                 </a>
             </div>
         </div>
 
-        <nav class="flex bg-slate-800/60 p-0.5 rounded-lg border border-slate-700 w-full">
-            <button onclick="switchTab('daily')" id="tab-daily" class="flex-1 py-1.5 rounded-md font-bold transition-all text-[10px] uppercase tracking-wider">Schedule</button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-1.5 rounded-md font-bold transition-all text-[10px] uppercase tracking-wider">Master</button>
+        <nav class="flex bg-slate-800/60 p-1 rounded-xl border border-slate-700 w-full">
+            <button onclick="window.switchTab('daily')" id="tab-daily" class="flex-1 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider bg-slate-700 text-white">Daily</button>
+            <button onclick="window.switchTab('settings')" id="tab-settings" class="flex-1 py-1.5 rounded-lg font-bold transition-all text-[10px] uppercase tracking-wider text-slate-400">Master</button>
         </nav>
     </header>
 
     <!-- DAILY PRODUCTION -->
-    <div id="content-daily" class="tab-content">
-        <div class="bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-700 mb-2 space-y-2">
-            <div class="flex items-center justify-between gap-1">
-                <input type="time" id="shift-start" class="form-input font-bold text-sm h-8 py-0 px-2 w-24 bg-slate-900 border-slate-700" onchange="calculateSchedule()">
+    <div id="content-daily" class="tab-content active">
+        <div class="bg-slate-800 p-3 rounded-2xl shadow-xl border border-slate-700 mb-3 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1">
+                    <input type="time" id="shift-start" class="form-input font-bold text-sm h-9 py-0 px-2 w-24 bg-slate-900" onchange="window.calculateSchedule()" value="08:00">
+                </div>
                 
-                <div class="flex gap-1">
-                    <button onclick="resetDaily()" class="btn-tiny bg-slate-700 border border-slate-600 text-slate-300">Reset</button>
-                    <button onclick="saveDaily()" class="btn-tiny bg-emerald-900/30 text-emerald-400 border border-emerald-800/50">Save</button>
-                    <button onclick="addRow()" class="btn-tiny bg-blue-600 text-white">+ Job</button>
+                <div class="flex gap-1.5">
+                    <button onclick="window.resetDaily()" class="btn-tiny bg-slate-700 border border-slate-600 text-slate-300 active:bg-slate-600">Reset</button>
+                    <button onclick="window.saveDailyToCloud()" class="btn-tiny bg-emerald-900/30 text-emerald-400 border border-emerald-800/50 active:bg-emerald-800/50">Save Cloud</button>
+                    <button onclick="window.addRow()" class="btn-tiny bg-blue-600 text-white shadow-lg shadow-blue-900/20 active:bg-blue-500">+ Job</button>
                 </div>
             </div>
 
-            <div class="pt-1 border-t border-slate-700">
+            <div class="pt-2 border-t border-slate-700">
                 <div class="relative">
-                    <input type="text" id="daily-comp-search" placeholder="Quick Search Company..." oninput="renderDailySearch()" class="form-input h-8 text-[11px] pl-8 bg-slate-900">
-                    <svg class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <input type="text" id="daily-comp-search" placeholder="Search Master..." oninput="window.renderDailySearch()" class="form-input h-9 text-xs pl-9 bg-slate-900">
+                    <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </div>
-                <div id="daily-search-results" class="hidden mt-1.5 max-h-40 overflow-y-auto space-y-1 bg-slate-900/50 p-1 rounded-lg border border-slate-700"></div>
+                <div id="daily-search-results" class="hidden mt-2 max-h-48 overflow-y-auto space-y-1.5 bg-slate-900/50 p-1.5 rounded-xl border border-slate-700"></div>
             </div>
         </div>
 
-        <div class="overflow-hidden shadow-2xl rounded-xl border border-slate-700 bg-slate-800">
+        <div class="overflow-hidden shadow-2xl rounded-2xl border border-slate-700 bg-slate-800">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse table-fixed">
                     <thead>
                         <tr>
-                            <th class="pl-3" style="width: auto;">Job Details</th>
+                            <th class="pl-4" style="width: auto;">Job Details</th>
                             <th class="text-center col-qty">Qty</th>
                             <th class="text-center col-lot">Lot</th>
                             <th class="text-center col-gap">Gap</th>
@@ -181,73 +209,92 @@
                     <tbody id="daily-body" class="row-colors-variety"></tbody>
                 </table>
             </div>
-            <div id="empty-state" class="hidden p-8 text-center">
-                <p class="text-slate-500 text-[10px] font-black uppercase tracking-widest">No jobs scheduled</p>
+            <div id="empty-state" class="p-12 text-center">
+                <p class="text-slate-500 text-xs font-black uppercase tracking-widest">No jobs scheduled</p>
             </div>
         </div>
     </div>
 
     <!-- MASTER SETTINGS -->
     <div id="content-settings" class="tab-content">
-        <div class="space-y-3">
-            <div class="bg-slate-800 p-3 rounded-xl shadow-xl border border-slate-700">
-                <h2 class="text-[9px] font-black text-slate-500 mb-2 uppercase tracking-widest">Register Company</h2>
-                <div class="flex gap-1.5">
-                    <input type="text" id="comp-name" placeholder="Name" class="form-input h-9 bg-slate-900">
-                    <button onclick="saveCompany()" class="bg-slate-100 text-slate-900 px-4 rounded-lg text-[11px] font-bold active:bg-white">Add</button>
+        <div class="space-y-4">
+            <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Register Company</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="comp-name" placeholder="Company Name" class="form-input h-10 bg-slate-900">
+                    <button onclick="window.saveCompany()" class="bg-slate-100 text-slate-900 px-5 rounded-xl text-xs font-bold active:bg-white">Add</button>
                 </div>
                 
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">Company List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                <details class="group mt-3" open>
+                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Company List</span>
+                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-                    <ul id="company-list" class="space-y-1 mt-2 px-0.5"></ul>
+                    <ul id="company-list" class="space-y-1.5 mt-3 px-1"></ul>
                 </details>
             </div>
 
-            <div class="bg-slate-800 p-3 rounded-xl shadow-xl border border-slate-700">
-                <h2 class="text-[9px] font-black text-slate-500 mb-2 uppercase tracking-widest">Register Product</h2>
-                <div class="space-y-1.5">
-                    <select id="prod-comp" class="form-input h-9 bg-slate-900"></select>
-                    <input type="text" id="prod-name" placeholder="Product ID / Name" class="form-input h-9 bg-slate-900">
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <input type="number" step="0.0001" id="prod-std" placeholder="Std" class="form-input h-9 bg-slate-900">
-                        <input type="number" id="prod-qty" placeholder="Qty" class="form-input h-9 bg-slate-900">
-                        <input type="number" id="prod-gap" placeholder="Gap" class="form-input h-9 bg-slate-900">
+            <div class="bg-slate-800 p-4 rounded-2xl shadow-xl border border-slate-700">
+                <h2 class="text-[10px] font-black text-slate-500 mb-3 uppercase tracking-widest">Register Product</h2>
+                <div class="space-y-2">
+                    <select id="prod-comp" class="form-input h-10 bg-slate-900"></select>
+                    <input type="text" id="prod-name" placeholder="Product ID / Name" class="form-input h-10 bg-slate-900">
+                    <div class="grid grid-cols-3 gap-2">
+                        <input type="number" step="0.0001" id="prod-std" placeholder="Std Time" class="form-input h-10 bg-slate-900">
+                        <input type="number" id="prod-qty" placeholder="Std Qty" class="form-input h-10 bg-slate-900">
+                        <input type="number" id="prod-gap" placeholder="Gap (min)" class="form-input h-10 bg-slate-900">
                     </div>
-                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-2 rounded-lg text-[11px] font-bold shadow-lg active:bg-blue-500">Add Product</button>
+                    <button onclick="window.saveProduct()" class="w-full bg-blue-600 text-white py-3 rounded-xl text-xs font-bold mt-2 shadow-lg shadow-blue-900/20 active:bg-blue-500">Add Product</button>
                 </div>
 
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">Product List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                <details class="group mt-4">
+                    <summary class="flex items-center justify-between cursor-pointer p-3 bg-slate-900/50 rounded-xl border border-slate-700/50">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Master Product List</span>
+                        <svg class="w-4 h-4 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </summary>
-                    <ul id="product-list" class="space-y-1 mt-2 px-0.5 max-h-56 overflow-y-auto"></ul>
+                    <ul id="product-list" class="space-y-1.5 mt-3 px-1 max-h-64 overflow-y-auto"></ul>
                 </details>
             </div>
         </div>
     </div>
 
-    <!-- MODAL & NOTIFICATIONS -->
-    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden" onclick="closeModal()"></div>
-    <div id="edit-modal" class="fixed bottom-0 left-0 right-0 rounded-t-2xl p-4 z-50 hidden flex-col shadow-2xl border-t border-slate-700">
-        <div class="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-4"></div>
-        <h3 id="modal-title" class="text-xs font-black text-slate-200 uppercase mb-3 tracking-widest text-center">Edit Entry</h3>
-        <div id="modal-content" class="space-y-3"></div>
-        <div class="flex gap-2 mt-6">
-            <button onclick="closeModal()" class="flex-1 py-2.5 bg-slate-800 text-slate-400 font-bold rounded-lg text-xs">Cancel</button>
-            <button onclick="confirmEdit()" class="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-lg text-xs">Save</button>
+    <!-- MOBILE EDIT MODAL -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden" onclick="window.closeModal()"></div>
+    <div id="edit-modal" class="fixed bottom-0 left-0 right-0 rounded-t-3xl p-6 z-50 hidden flex-col shadow-2xl border-t border-slate-700">
+        <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
+        <h3 id="modal-title" class="text-sm font-black text-slate-200 uppercase mb-4 tracking-widest text-center">Edit Entry</h3>
+        <div id="modal-content" class="space-y-4"></div>
+        <div class="flex gap-3 mt-8">
+            <button onclick="window.closeModal()" class="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-xl text-sm border border-slate-700">Cancel</button>
+            <button onclick="window.confirmEdit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-900/20">Save Changes</button>
         </div>
     </div>
 
-    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-white text-slate-900 px-4 py-2 rounded-full shadow-2xl z-50 text-[9px] font-black uppercase tracking-widest pointer-events-none">
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-white text-slate-900 px-6 py-2.5 rounded-full shadow-2xl z-50 text-[10px] font-black uppercase tracking-widest pointer-events-none">
         <span id="toast-msg">Saved</span>
     </div>
 </div>
 
-<script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Firebase Setup ---
+    const firebaseConfig = JSON.parse(__firebase_config);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ht-scheduler-pro';
+
+    let currentUser = null;
+    let companies = [];
+    let products = [];
+    let dailyJobs = [];
+    let currentEditingType = null;
+    let currentEditingId = null;
+
     const PRELOAD_COMPANIES = [
         "Ashahi", "FUZI SEIRA", "HOKUTO(北斗)", "Katsusika ネジ", "KHAMIDA", 
         "KOYA-UCHI", "NDN", "TAKAO(高尾)", "Toushou(東証)", "YAMAMOTO(山本)", 
@@ -258,89 +305,311 @@
         "桂川(ktsuragawa)", "秋山(AKIYAMA)", "藤崎鋲螺(fujisaki)", "赤羽(Akabane)"
     ];
 
-    let companies = JSON.parse(localStorage.getItem('ht_companies')) || [];
-    let products = JSON.parse(localStorage.getItem('ht_products')) || [];
-    let dailyJobs = JSON.parse(localStorage.getItem('ht_daily_save')) || [];
-    let savedStartTime = localStorage.getItem('ht_start_time') || "08:00";
-    
-    let currentEditingType = null;
-    let currentEditingId = null;
-
-    if (companies.length === 0) {
-        companies = PRELOAD_COMPANIES.map((name, index) => ({ id: Date.now() + index, name: name }));
-        companies.sort((a, b) => a.name.localeCompare(b.name));
-        localStorage.setItem('ht_companies', JSON.stringify(companies));
-    }
-
     const companyColors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6', '#fb7185', '#fb923c', '#22d3ee'];
 
-    function showToast(msg) {
+    // --- Core Logic Functions (Exposed to window) ---
+
+    window.showToast = (msg) => {
         const toast = document.getElementById('toast');
         document.getElementById('toast-msg').innerText = msg;
         toast.style.opacity = '1';
-        setTimeout(() => toast.style.opacity = '0', 1500);
-    }
+        setTimeout(() => toast.style.opacity = '0', 2000);
+    };
 
-    function saveToStorage() {
-        localStorage.setItem('ht_companies', JSON.stringify(companies));
-        localStorage.setItem('ht_products', JSON.stringify(products));
-        localStorage.setItem('ht_daily_save', JSON.stringify(dailyJobs));
-    }
-
-    function switchTab(tab) {
+    window.switchTab = (tab) => {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.getElementById(`content-${tab}`).classList.add('active');
         document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-slate-700', 'text-white', 'shadow-sm');
+            btn.classList.remove('bg-slate-700', 'text-white');
             btn.classList.add('text-slate-400');
         });
         const activeBtn = document.getElementById(`tab-${tab}`);
         activeBtn.classList.remove('text-slate-400');
-        activeBtn.classList.add('bg-slate-700', 'text-white', 'shadow-sm');
-        if(tab === 'settings') renderSettings();
-        if(tab === 'daily') { renderDaily(); renderDailySearch(); }
-    }
+        activeBtn.classList.add('bg-slate-700', 'text-white');
 
-    function toggleModal(show) {
-        const modal = document.getElementById('edit-modal');
-        const overlay = document.getElementById('modal-overlay');
-        if(show) {
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.add('active'), 10);
-            overlay.classList.remove('hidden');
-        } else {
-            modal.classList.remove('active');
-            setTimeout(() => { modal.classList.add('hidden'); overlay.classList.add('hidden'); }, 300);
+        if(tab === 'settings') window.renderSettings();
+        if(tab === 'daily') { window.renderDaily(); window.renderDailySearch(); }
+    };
+
+    window.saveCompany = async () => {
+        const nameEl = document.getElementById('comp-name');
+        const name = nameEl.value.trim();
+        if(!name || !currentUser) return;
+        companies.push({ id: Date.now(), name });
+        companies.sort((a, b) => a.name.localeCompare(b.name));
+        nameEl.value = '';
+        await saveToCloud();
+        window.renderSettings();
+    };
+
+    window.saveProduct = async () => {
+        const compEl = document.getElementById('prod-comp');
+        const nameEl = document.getElementById('prod-name');
+        const stdEl = document.getElementById('prod-std');
+        const qtyEl = document.getElementById('prod-qty');
+        const gapEl = document.getElementById('prod-gap');
+        
+        const compId = parseInt(compEl.value);
+        const name = nameEl.value.trim();
+        const std = parseFloat(stdEl.value);
+        const gap = parseInt(gapEl.value) || 30;
+        
+        if(!compId || !name || isNaN(std) || !currentUser) return;
+        products.push({ id: Date.now(), compId, name, std, qty: parseFloat(qtyEl.value) || 0, gap });
+        products.sort((a, b) => a.name.localeCompare(b.name));
+        
+        nameEl.value = ''; stdEl.value = ''; qtyEl.value = ''; gapEl.value = '';
+        await saveToCloud();
+        window.renderSettings();
+    };
+
+    window.deleteCompany = async (id) => {
+        if(confirm("Delete company?")) {
+            companies = companies.filter(c => c.id !== id);
+            await saveToCloud();
+            window.renderSettings();
         }
-    }
+    };
 
-    function openEditCompany(id) {
+    window.deleteProduct = async (id) => {
+        if(confirm("Delete product?")) {
+            products = products.filter(p => p.id !== id);
+            await saveToCloud();
+            window.renderSettings();
+        }
+    };
+
+    window.addRow = () => {
+        dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 });
+        window.renderDaily();
+    };
+
+    window.updateJob = (index, field, value) => {
+        const job = dailyJobs[index];
+        job[field] = value;
+        if (field === 'compId') job.prodId = '';
+        if (field === 'prodId') {
+            const prod = products.find(p => p.id == value);
+            if(prod) { job.qty = prod.qty || 0; job.gap = prod.gap || 30; }
+        }
+        window.calculateSchedule();
+    };
+
+    window.calculateSchedule = () => {
+        const timeValue = document.getElementById('shift-start').value;
+        if (!timeValue) return;
+        
+        const [hours, minutes] = timeValue.split(':');
+        let timeline = new Date();
+        timeline.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        dailyJobs.forEach((job) => {
+            const prod = products.find(p => p.id == job.prodId);
+            job.startTime = timeline.toISOString();
+            let baseDuration = 0;
+            if (prod) {
+                baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
+            }
+            job.durationMinutes = baseDuration;
+            const end = new Date(new Date(job.startTime).getTime() + (baseDuration * 60000));
+            job.endTime = end.toISOString();
+            timeline = new Date(end.getTime() + ((parseInt(job.gap) || 0) * 60000));
+        });
+        window.renderDaily();
+    };
+
+    window.resetDaily = () => {
+        if(confirm("Clear current schedule?")) {
+            dailyJobs = [];
+            window.renderDaily();
+        }
+    };
+
+    window.saveDailyToCloud = async () => {
+        if(!currentUser) return;
+        await saveToCloud();
+        window.showToast("Cloud Saved");
+    };
+
+    // --- UI Rendering ---
+
+    window.getCompanyColor = (compId) => {
+        const index = companies.findIndex(c => c.id == compId);
+        return index !== -1 ? companyColors[index % companyColors.length] : '#334155';
+    };
+
+    window.renderSettings = () => {
+        document.getElementById('company-list').innerHTML = companies.map(c => `
+            <li class="flex justify-between items-center p-2 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
+                <div class="flex items-center flex-grow pl-1">
+                    <div class="w-2 h-4 rounded-full mr-2" style="background-color: ${window.getCompanyColor(c.id)}"></div>
+                    <span class="text-slate-200">${c.name}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openEditCompany(${c.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button onclick="window.deleteCompany(${c.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                    </button>
+                </div>
+            </li>`).join('');
+            
+        document.getElementById('product-list').innerHTML = products.map(p => {
+            const comp = companies.find(c => c.id == p.compId);
+            return `
+            <li class="flex justify-between items-center p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-[11px] font-bold shadow-sm">
+                <div class="flex flex-col flex-grow pl-1">
+                    <span class="text-slate-100">${p.name}</span>
+                    <span class="text-[9px] text-slate-500 font-normal uppercase tracking-tight">${comp ? comp.name : 'Unknown'} • Std: ${p.std} • Gap: ${p.gap}m</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="window.openEditProduct(${p.id})" class="p-2.5 bg-slate-700 text-blue-400 rounded-lg active:bg-slate-600">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                    </button>
+                    <button onclick="window.deleteProduct(${p.id})" class="p-2.5 bg-slate-700 text-red-400 rounded-lg active:bg-slate-600">
+                         <svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
+                    </button>
+                </div>
+            </li>`}).join('');
+            
+        document.getElementById('prod-comp').innerHTML = '<option value="">Select Company...</option>' + 
+            companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    };
+
+    window.renderDailySearch = () => {
+        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
+        const resultsEl = document.getElementById('daily-search-results');
+        if (!searchVal) { resultsEl.classList.add('hidden'); return; }
+        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
+        resultsEl.innerHTML = filtered.map(c => `
+            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-2 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-1.5 h-4 rounded-full mr-2" style="background-color: ${window.getCompanyColor(c.id)}"></div>
+                    <span class="text-xs font-bold text-slate-200">${c.name}</span>
+                </div>
+                <button onclick="window.addJobByCompany(${c.id})" class="bg-blue-600 text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-tight">Add</button>
+            </div>
+        `).join('') || '<p class="text-center text-[10px] py-2 text-slate-500">No matches</p>';
+        resultsEl.classList.remove('hidden');
+    };
+
+    window.addJobByCompany = (compId) => { 
+        dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 30 }); 
+        document.getElementById('daily-comp-search').value = ''; 
+        window.renderDailySearch(); 
+        window.calculateSchedule(); 
+        window.showToast('Added'); 
+    };
+
+    const formatT = (dateStr) => { 
+        if(!dateStr) return "--:--";
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); 
+    };
+    
+    const formatDuration = (min) => { 
+        return min >= 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; 
+    };
+
+    window.renderDaily = () => {
+        const tbody = document.getElementById('daily-body');
+        if (dailyJobs.length === 0) { 
+            tbody.innerHTML = ''; 
+            document.getElementById('empty-state').classList.remove('hidden'); 
+            return; 
+        }
+        document.getElementById('empty-state').classList.add('hidden');
+        
+        tbody.innerHTML = dailyJobs.map((job, idx) => {
+            const filteredProds = products.filter(p => p.compId == job.compId);
+            return `
+            <tr class="border-b border-slate-700/50">
+                <td class="pl-4 py-3">
+                    <div class="flex items-center">
+                        <div class="company-pill" style="background-color: ${window.getCompanyColor(job.compId)}"></div>
+                        <div class="min-w-0">
+                            <select onchange="window.updateJob(${idx}, 'compId', this.value)" class="form-input text-[11px] font-black border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none text-slate-100">
+                                <option value="" class="bg-slate-800">Company...</option>
+                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''} class="bg-slate-800">${c.name}</option>`).join('')}
+                            </select>
+                            <select onchange="window.updateJob(${idx}, 'prodId', this.value)" class="form-input text-[10px] text-slate-400 font-bold border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none">
+                                <option value="" class="bg-slate-800">Product...</option>
+                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''} class="bg-slate-800">${p.name}</option>`).join('')}
+                            </select>
+                        </div>
+                    </div>
+                </td>
+                <td class="text-center col-qty">
+                    <input type="number" value="${job.qty}" onchange="window.updateJob(${idx}, 'qty', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
+                </td>
+                <td class="text-center col-lot">
+                    <input type="number" value="${job.lot}" onchange="window.updateJob(${idx}, 'lot', this.value)" class="form-input text-xs w-9 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
+                </td>
+                <td class="text-center col-gap">
+                    <input type="number" value="${job.gap}" onchange="window.updateJob(${idx}, 'gap', this.value)" class="form-input text-xs w-11 text-center font-bold p-1 h-8 bg-slate-900 border-slate-700">
+                </td>
+                <td class="col-times">
+                    <div class="flex flex-col leading-none">
+                        <span class="text-blue-400 time-badge text-[10px]">${formatT(job.startTime)}</span>
+                        <span class="text-[7px] font-black text-slate-500 py-0.5 uppercase">${formatDuration(job.durationMinutes)}</span>
+                        <span class="text-emerald-400 time-badge text-[10px]">${formatT(job.endTime)}</span>
+                    </div>
+                </td>
+                <td class="pr-3 text-right">
+                    <button onclick="dailyJobs.splice(${idx}, 1); window.calculateSchedule();" class="p-2 text-slate-600 active:text-red-500 transition-colors">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+    };
+
+    // --- Modal Editing Functions ---
+
+    window.openEditCompany = (id) => {
         const company = companies.find(c => c.id === id);
         if(!company) return;
         currentEditingType = 'company';
         currentEditingId = id;
         document.getElementById('modal-title').innerText = "Edit Company";
-        document.getElementById('modal-content').innerHTML = `<input type="text" id="edit-val-name" value="${company.name}" class="form-input h-10 bg-slate-900">`;
+        document.getElementById('modal-content').innerHTML = `
+            <div class="space-y-1">
+                <label class="text-[10px] font-black text-slate-500 uppercase">Company Name</label>
+                <input type="text" id="edit-val-name" value="${company.name}" class="form-input h-12 bg-slate-900">
+            </div>
+        `;
         toggleModal(true);
-    }
+    };
 
-    function openEditProduct(id) {
+    window.openEditProduct = (id) => {
         const prod = products.find(p => p.id === id);
         if(!prod) return;
         currentEditingType = 'product';
         currentEditingId = id;
         document.getElementById('modal-title').innerText = "Edit Product";
         document.getElementById('modal-content').innerHTML = `
-            <input type="text" id="edit-val-name" value="${prod.name}" class="form-input h-10 bg-slate-900 mb-2">
-            <div class="grid grid-cols-2 gap-2">
-                <input type="number" step="0.0001" id="edit-val-std" value="${prod.std}" class="form-input h-10 bg-slate-900">
-                <input type="number" id="edit-val-gap" value="${prod.gap}" class="form-input h-10 bg-slate-900">
+            <div class="space-y-3">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-500 uppercase">Product Name</label>
+                    <input type="text" id="edit-val-name" value="${prod.name}" class="form-input h-12 bg-slate-900">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Std Time</label>
+                        <input type="number" step="0.0001" id="edit-val-std" value="${prod.std}" class="form-input h-12 bg-slate-900">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-500 uppercase">Gap (min)</label>
+                        <input type="number" id="edit-val-gap" value="${prod.gap}" class="form-input h-12 bg-slate-900">
+                    </div>
+                </div>
             </div>
         `;
         toggleModal(true);
-    }
+    };
 
-    function confirmEdit() {
+    window.confirmEdit = async () => {
         const name = document.getElementById('edit-val-name').value.trim();
         if(!name) return;
         if(currentEditingType === 'company') {
@@ -350,183 +619,106 @@
             const std = parseFloat(document.getElementById('edit-val-std').value);
             const gap = parseInt(document.getElementById('edit-val-gap').value);
             const index = products.findIndex(p => p.id === currentEditingId);
-            if(index !== -1) { products[index].name = name; products[index].std = std; products[index].gap = gap; }
+            if(index !== -1) {
+                products[index].name = name;
+                products[index].std = std;
+                products[index].gap = gap;
+            }
         }
-        saveToStorage(); renderSettings(); closeModal(); showToast('Updated');
-    }
-
-    function closeModal() { toggleModal(false); }
-
-    function saveCompany() {
-        const nameEl = document.getElementById('comp-name');
-        if(!nameEl.value.trim()) return;
-        companies.push({ id: Date.now(), name: nameEl.value.trim() });
-        companies.sort((a, b) => a.name.localeCompare(b.name));
-        saveToStorage(); nameEl.value = ''; renderSettings();
-    }
-
-    function saveProduct() {
-        const compId = parseInt(document.getElementById('prod-comp').value);
-        const name = document.getElementById('prod-name').value.trim();
-        const std = parseFloat(document.getElementById('prod-std').value);
-        if(!compId || !name || isNaN(std)) return;
-        products.push({ 
-            id: Date.now(), compId, name, std, 
-            qty: parseFloat(document.getElementById('prod-qty').value) || 0, 
-            gap: parseInt(document.getElementById('prod-gap').value) || 30 
-        });
-        products.sort((a, b) => a.name.localeCompare(b.name));
-        saveToStorage(); renderSettings();
-        ['prod-name','prod-std','prod-qty','prod-gap'].forEach(id => document.getElementById(id).value = '');
-    }
-
-    function getCompanyColor(compId) {
-        const index = companies.findIndex(c => c.id == compId);
-        return index !== -1 ? companyColors[index % companyColors.length] : '#334155';
-    }
-
-    function renderSettings() {
-        document.getElementById('company-list').innerHTML = companies.map(c => `
-            <li class="flex justify-between items-center p-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold">
-                <div class="flex items-center flex-grow pl-1">
-                    <div class="w-1.5 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                    <span class="text-slate-200">${c.name}</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <button onclick="openEditCompany(${c.id})" class="p-1.5 text-blue-400"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                    <button onclick="deleteCompany(${c.id})" class="p-1.5 text-red-400"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg></button>
-                </div>
-            </li>`).join('');
-            
-        document.getElementById('product-list').innerHTML = products.map(p => {
-            const comp = companies.find(c => c.id == p.compId);
-            return `
-            <li class="flex justify-between items-center p-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold">
-                <div class="flex flex-col flex-grow pl-1">
-                    <span class="text-slate-100">${p.name}</span>
-                    <span class="text-[8px] text-slate-500 font-normal uppercase">${comp ? comp.name : '?'} • Std: ${p.std}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <button onclick="openEditProduct(${p.id})" class="p-1.5 text-blue-400"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                    <button onclick="deleteProduct(${p.id})" class="p-1.5 text-red-400"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg></button>
-                </div>
-            </li>`}).join('');
-            
-        document.getElementById('prod-comp').innerHTML = '<option value="">Select Company...</option>' + 
-            companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    }
-
-    function deleteCompany(id) { if(confirm("Delete?")) { companies = companies.filter(c => c.id !== id); saveToStorage(); renderSettings(); } }
-    function deleteProduct(id) { if(confirm("Delete?")) { products = products.filter(p => p.id !== id); saveToStorage(); renderSettings(); } }
-
-    function renderDailySearch() {
-        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
-        const resultsEl = document.getElementById('daily-search-results');
-        if (!searchVal) { resultsEl.classList.add('hidden'); return; }
-        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
-        resultsEl.innerHTML = filtered.map(c => `
-            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg p-1.5">
-                <div class="flex items-center">
-                    <div class="w-1 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                    <span class="text-[10px] font-bold text-slate-200">${c.name}</span>
-                </div>
-                <button onclick="addJobByCompany(${c.id})" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">Add</button>
-            </div>
-        `).join('') || '<p class="text-center text-[8px] py-1 text-slate-500">No matches</p>';
-        resultsEl.classList.remove('hidden');
-    }
-
-    function addRow() { dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 30 }); renderDaily(); }
-    function addJobByCompany(compId) { dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 30 }); document.getElementById('daily-comp-search').value = ''; renderDailySearch(); calculateSchedule(); showToast('Added'); }
-
-    function updateJob(index, field, value) {
-        const job = dailyJobs[index];
-        job[field] = value;
-        if (field === 'compId') job.prodId = '';
-        if (field === 'prodId') {
-            const prod = products.find(p => p.id == value);
-            if(prod) { job.qty = prod.qty || 0; job.gap = prod.gap || 30; }
-        }
-        calculateSchedule();
-    }
-
-    function calculateSchedule() {
-        const timeValue = document.getElementById('shift-start').value || "08:00";
-        localStorage.setItem('ht_start_time', timeValue);
-        const [hours, minutes] = timeValue.split(':');
-        let timeline = new Date();
-        timeline.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        dailyJobs.forEach((job) => {
-            const prod = products.find(p => p.id == job.prodId);
-            job.startTime = new Date(timeline);
-            let baseDuration = 0;
-            if (prod) baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
-            job.durationMinutes = baseDuration;
-            job.endTime = new Date(job.startTime.getTime() + (baseDuration * 60000));
-            timeline = new Date(job.endTime.getTime() + ((parseInt(job.gap) || 0) * 60000));
-        });
-        renderDaily();
-    }
-
-    function formatT(date) { return date ? new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : "--:--"; }
-    function formatDuration(min) { return min > 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; }
-
-    function renderDaily() {
-        const tbody = document.getElementById('daily-body');
-        if (dailyJobs.length === 0) { tbody.innerHTML = ''; document.getElementById('empty-state').classList.remove('hidden'); return; }
-        document.getElementById('empty-state').classList.add('hidden');
-        tbody.innerHTML = dailyJobs.map((job, idx) => {
-            const filteredProds = products.filter(p => p.compId == job.compId);
-            return `
-            <tr class="border-b border-slate-700/50">
-                <td class="pl-3 py-2">
-                    <div class="flex items-center">
-                        <div class="company-pill" style="background-color: ${getCompanyColor(job.compId)}"></div>
-                        <div class="min-w-0">
-                            <select onchange="updateJob(${idx}, 'compId', this.value)" class="form-input text-[10px] font-black border-none p-0 h-3 focus:ring-0 bg-transparent truncate-name appearance-none text-slate-100">
-                                <option value="" class="bg-slate-800">Company...</option>
-                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''} class="bg-slate-800">${c.name}</option>`).join('')}
-                            </select>
-                            <select onchange="updateJob(${idx}, 'prodId', this.value)" class="form-input text-[9px] text-slate-400 font-bold border-none p-0 h-3 focus:ring-0 bg-transparent truncate-name appearance-none">
-                                <option value="" class="bg-slate-800">Product...</option>
-                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''} class="bg-slate-800">${p.name}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                </td>
-                <td class="text-center col-qty">
-                    <input type="number" value="${job.qty}" onchange="updateJob(${idx}, 'qty', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-7 bg-slate-900 border-slate-700">
-                </td>
-                <td class="text-center col-lot">
-                    <input type="number" value="${job.lot}" onchange="updateJob(${idx}, 'lot', this.value)" class="form-input text-[10px] w-8 text-center font-bold p-0.5 h-7 bg-slate-900 border-slate-700">
-                </td>
-                <td class="text-center col-gap">
-                    <input type="number" value="${job.gap}" onchange="updateJob(${idx}, 'gap', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-7 bg-slate-900 border-slate-700">
-                </td>
-                <td class="col-times">
-                    <div class="flex flex-col leading-none">
-                        <span class="text-blue-400 time-badge text-[9px]">${formatT(job.startTime)}</span>
-                        <span class="text-[6px] font-black text-slate-500 py-0.5 uppercase">${formatDuration(job.durationMinutes)}</span>
-                        <span class="text-emerald-400 time-badge text-[9px]">${formatT(job.endTime)}</span>
-                    </div>
-                </td>
-                <td class="pr-3 text-right">
-                    <button onclick="removeJob(${idx})" class="text-slate-600 hover:text-red-400">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
-    }
-
-    function removeJob(idx) { dailyJobs.splice(idx, 1); calculateSchedule(); }
-    function resetDaily() { if(confirm("Clear schedule?")) { dailyJobs = []; renderDaily(); saveToStorage(); } }
-    function saveDaily() { saveToStorage(); showToast('Schedule Saved'); }
-
-    window.onload = () => {
-        document.getElementById('shift-start').value = savedStartTime;
-        switchTab('daily');
+        await saveToCloud();
+        window.renderSettings();
+        window.closeModal();
+        window.showToast('Updated');
     };
+
+    const toggleModal = (show) => {
+        const modal = document.getElementById('edit-modal');
+        const overlay = document.getElementById('modal-overlay');
+        if(show) {
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('active'), 10);
+            overlay.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        } else {
+            modal.classList.remove('active');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                overlay.classList.add('hidden');
+            }, 300);
+            document.body.style.overflow = 'auto';
+        }
+    };
+
+    window.closeModal = () => toggleModal(false);
+
+    // --- Firebase Sync Logic ---
+
+    const saveToCloud = async () => {
+        if (!currentUser) return;
+        try {
+            const userDoc = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'appData', 'master');
+            await setDoc(userDoc, {
+                companies,
+                products,
+                dailyJobs,
+                startTime: document.getElementById('shift-start').value || "08:00",
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+        } catch (e) {
+            console.error("Cloud save failed", e);
+        }
+    };
+
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) {
+            console.error("Auth failed", e);
+        }
+    };
+
+    onAuthStateChanged(auth, async (user) => {
+        const statusEl = document.getElementById('sync-status');
+        if (user) {
+            currentUser = user;
+            statusEl.innerText = "ONLINE";
+            statusEl.className = "status-online";
+            
+            // Load initial data
+            const userDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'appData', 'master');
+            const snap = await getDoc(userDoc);
+            
+            if (snap.exists()) {
+                const data = snap.data();
+                companies = data.companies || [];
+                products = data.products || [];
+                dailyJobs = data.dailyJobs || [];
+                document.getElementById('shift-start').value = data.startTime || "08:00";
+            } else {
+                // First time user: Init with preloads
+                companies = PRELOAD_COMPANIES.map((name, index) => ({
+                    id: Date.now() + index,
+                    name: name
+                }));
+                companies.sort((a, b) => a.name.localeCompare(b.name));
+                await saveToCloud();
+            }
+            
+            window.renderDaily();
+            window.renderSettings();
+        } else {
+            statusEl.innerText = "OFFLINE";
+            statusEl.className = "status-offline";
+        }
+    });
+
+    // Start everything
+    initAuth();
+
 </script>
 </body>
 </html>
