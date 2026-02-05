@@ -1,769 +1,392 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>HT Production Scheduler</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root { 
-            --primary: #3b82f6; 
-            --bg-main: #0f172a;
-            --bg-card: #1e293b;
-            --border-color: #334155;
-            --text-main: #f1f5f9;
-            --text-dim: #94a3b8;
-        }
-        body { 
-            background-color: var(--bg-main); 
-            color: var(--text-main);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            overscroll-behavior-y: contain;
-        }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        
-        .form-input {
-            width: 100%; padding: 0.5rem; border: 1px solid var(--border-color);
-            border-radius: 0.5rem; background: #0f172a; font-size: 0.9rem;
-            color: white;
-            transition: all 0.2s;
-        }
-        .form-input:focus { border-color: #3b82f6; outline: none; ring: 2px; ring-color: #1e40af; }
-        
-        .col-qty { width: 50px; }
-        .col-lot { width: 55px; }
-        .col-gap { width: 62px; }
-        .col-times { width: 75px; }
-        
-        th { 
-            background: #1e293b; 
-            color: #64748b; 
-            padding: 0.6rem 0.25rem; 
-            font-size: 0.55rem; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            font-weight: 800;
-            border-bottom: 1px solid var(--border-color);
-        }
-        td { padding: 0.6rem 0.25rem; } 
-        
-        .time-badge { 
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
-            font-weight: 700; 
-            letter-spacing: -0.05em;
-        }
-        
-        .company-pill { height: 1.8rem; width: 3px; border-radius: 2px; margin-right: 6px; flex-shrink: 0; }
-        
-        .btn-action-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .nav-util-btn {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #1e293b;
-            border: 1px solid #334155;
-            color: #94a3b8;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .nav-util-btn:hover { background: #334155; color: white; }
-
-        .truncate-name {
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100px;
-        }
-
-        #edit-modal {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: translateY(100%);
-            background-color: #1e293b;
-        }
-        #edit-modal.active { transform: translateY(0); }
-
-        .row-colors-variety tr:nth-child(odd) { background-color: rgba(255, 255, 255, 0.02); }
-        .row-colors-variety tr:hover { background-color: rgba(255, 255, 255, 0.05); }
-
-        .fab {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 28px;
-            background-color: #2563eb;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
-            z-index: 30;
-            transition: transform 0.2s;
-        }
-        .fab:active { transform: scale(0.9); }
-
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-
-        select { color-scheme: dark; }
-
-        /* Firebase sync indicator */
-        .sync-indicator {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: #10b981;
-            z-index: 100;
-            transition: all 0.3s;
-        }
-        .sync-indicator.syncing { background-color: #f59e0b; animation: pulse 1s infinite; }
-        .sync-indicator.offline { background-color: #ef4444; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    </style>
-</head>
-<body class="p-2 pb-24">
-
-<!-- Firebase Sync Indicator -->
-<div id="sync-indicator" class="sync-indicator" title="Online & Synced"></div>
-
-<div class="max-w-3xl mx-auto">
-    <!-- Header -->
-    <header class="mb-3">
-        <div class="flex flex-row justify-between items-center px-1 mb-2">
-            <div class="flex items-center gap-1.5">
-                <div class="bg-blue-600 p-1 rounded-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <h1 class="text-sm font-black text-slate-100 tracking-tighter uppercase">HT Scheduler</h1>
-            </div>
-            
-            <div class="flex items-center gap-1.5">
-                <a href="OT.html" class="nav-util-btn" title="Overtime">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </a>
-                <a href="CALC.html" class="nav-util-btn" title="Calculator">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                </a>
-                <a href="TIME.html" class="nav-util-btn" title="Time Log">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                </a>
-            </div>
-        </div>
-
-        <nav class="flex bg-slate-800/60 p-0.5 rounded-lg border border-slate-700 w-full">
-            <button onclick="switchTab('daily')" id="tab-daily" class="flex-1 py-1.5 rounded-md flex justify-center items-center transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-            </button>
-            <button onclick="switchTab('settings')" id="tab-settings" class="flex-1 py-1.5 rounded-md flex justify-center items-center transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            </button>
-        </nav>
-    </header>
-
-    <!-- DAILY PRODUCTION -->
-    <div id="content-daily" class="tab-content">
-        <div class="bg-slate-800 p-2 rounded-xl shadow-xl border border-slate-700 mb-2 space-y-2">
-            <div class="flex items-center justify-between gap-1">
-                <input type="time" id="shift-start" class="form-input font-bold text-sm h-9 py-0 px-2 w-28 bg-slate-900 border-slate-700" onchange="calculateSchedule()">
-                
-                <div class="flex gap-2">
-                    <button onclick="resetDaily()" class="btn-action-icon bg-red-900/30 text-red-400 border border-red-800/50" title="Reset">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                    <button onclick="saveDaily()" class="btn-action-icon bg-emerald-900/30 text-emerald-400 border border-emerald-800/50" title="Save">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M5 13l4 4L19 7"></path></svg>
-                    </button>
-                </div>
-            </div>
-
-            <div class="pt-1 border-t border-slate-700">
-                <div class="relative">
-                    <input type="text" id="daily-comp-search" placeholder="Quick Search Company..." oninput="renderDailySearch()" class="form-input h-9 text-[11px] pl-8 bg-slate-900">
-                    <svg class="w-3.5 h-3.5 absolute left-2.5 top-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </div>
-                <div id="daily-search-results" class="hidden mt-1.5 max-h-40 overflow-y-auto space-y-1 bg-slate-900/50 p-1 rounded-lg border border-slate-700"></div>
-            </div>
-        </div>
-
-        <div class="overflow-hidden shadow-2xl rounded-xl border border-slate-700 bg-slate-800">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse table-fixed">
-                    <thead>
-                        <tr>
-                            <th class="pl-3" style="width: auto;">Job Details</th>
-                            <th class="text-center col-qty">Qty</th>
-                            <th class="text-center col-lot">Lot</th>
-                            <th class="text-center col-gap">Gap</th>
-                            <th class="col-times">Times</th>
-                            <th class="pr-3 w-8"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="daily-body" class="row-colors-variety"></tbody>
-                </table>
-            </div>
-            <div id="empty-state" class="hidden p-8 text-center">
-                <p class="text-slate-500 text-[10px] font-black uppercase tracking-widest">No jobs scheduled</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- MASTER SETTINGS -->
-    <div id="content-settings" class="tab-content">
-        <div class="space-y-3">
-            <div class="bg-slate-800 p-3 rounded-xl shadow-xl border border-slate-700">
-                <h2 class="text-[9px] font-black text-slate-500 mb-2 uppercase tracking-widest">Register Company</h2>
-                <div class="flex gap-1.5">
-                    <input type="text" id="comp-name" placeholder="Name" class="form-input h-10 bg-slate-900">
-                    <button onclick="saveCompany()" class="bg-slate-100 text-slate-900 px-4 rounded-lg text-[11px] font-bold active:bg-white">Add</button>
-                </div>
-                
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">Company List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <ul id="company-list" class="space-y-1 mt-2 px-0.5"></ul>
-                </details>
-            </div>
-
-            <div class="bg-slate-800 p-3 rounded-xl shadow-xl border border-slate-700">
-                <h2 class="text-[9px] font-black text-slate-500 mb-2 uppercase tracking-widest">Register Product</h2>
-                <div class="space-y-1.5">
-                    <select id="prod-comp" class="form-input h-10 bg-slate-900"></select>
-                    <input type="text" id="prod-name" placeholder="Product ID / Name" class="form-input h-10 bg-slate-900">
-                    <div class="grid grid-cols-3 gap-1.5">
-                        <input type="number" step="0.0001" id="prod-std" placeholder="Std" class="form-input h-10 bg-slate-900">
-                        <input type="number" id="prod-qty" placeholder="Qty" class="form-input h-10 bg-slate-900">
-                        <input type="number" id="prod-gap" placeholder="Gap" value="65" class="form-input h-10 bg-slate-900">
-                    </div>
-                    <button onclick="saveProduct()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg text-[11px] font-bold shadow-lg active:bg-blue-500">Add Product</button>
-                </div>
-
-                <details class="group mt-2">
-                    <summary class="flex items-center justify-between cursor-pointer p-2 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">Product List</span>
-                        <svg class="w-3 h-3 transition-transform group-open:rotate-180 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
-                    </summary>
-                    <ul id="product-list" class="space-y-1 mt-2 px-0.5 max-h-56 overflow-y-auto"></ul>
-                </details>
-            </div>
-        </div>
-    </div>
-
-    <!-- Floating Action Button -->
-    <button onclick="addRow()" class="fab" id="fab-add-job" title="Add Job">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3"><path d="M12 6v12m6-6H6"></path></svg>
-    </button>
-
-    <!-- MODAL & NOTIFICATIONS -->
-    <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-40 hidden" onclick="closeModal()"></div>
-    <div id="edit-modal" class="fixed bottom-0 left-0 right-0 rounded-t-2xl p-4 z-50 hidden flex-col shadow-2xl border-t border-slate-700">
-        <div class="w-10 h-1 bg-slate-700 rounded-full mx-auto mb-4"></div>
-        <h3 id="modal-title" class="text-xs font-black text-slate-200 uppercase mb-3 tracking-widest text-center">Edit Entry</h3>
-        <div id="modal-content" class="space-y-3"></div>
-        <div class="flex gap-2 mt-6">
-            <button onclick="closeModal()" class="flex-1 py-3 bg-slate-800 text-slate-400 font-bold rounded-lg text-xs">Cancel</button>
-            <button onclick="confirmEdit()" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-lg text-xs">Save</button>
-        </div>
-    </div>
-
-    <div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 opacity-0 transition-all duration-300 bg-white text-slate-900 px-4 py-2 rounded-full shadow-2xl z-50 text-[9px] font-black uppercase tracking-widest pointer-events-none">
-        <span id="toast-msg">Saved</span>
-    </div>
-</div>
-
-<!-- Firebase SDK -->
-<script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-    import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-
-    // Firebase Configuration
-    const firebaseConfig = {
-        apiKey: "AIzaSyCJqUkXJsY5UPBTGjIgQNJj9uD82y8QtKk",
-        authDomain: "studio-1832449319-57f58.firebaseapp.com",
-        projectId: "studio-1832449319-57f58",
-        storageBucket: "studio-1832449319-57f58.firebasestorage.app",
-        messagingSenderId: "68570665337",
-        appId: "1:68570665337:web:a971b5933f57d50ec8dfa8"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Global state
-    window.firebaseDB = db;
-    window.firebaseLoaded = false;
-    window.isSyncing = false;
-
-    // Update sync indicator
-    function updateSyncIndicator(status) {
-        const indicator = document.getElementById('sync-indicator');
-        indicator.className = 'sync-indicator';
-        if (status === 'syncing') {
-            indicator.classList.add('syncing');
-            indicator.title = 'Syncing...';
-        } else if (status === 'offline') {
-            indicator.classList.add('offline');
-            indicator.title = 'Offline - Using Local Data';
-        } else {
-            indicator.title = 'Online & Synced';
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Pro Control Pro - Compact</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { 
+      -webkit-font-smoothing: antialiased; 
+      background-color: #020617;
+      font-family: -apple-system, system-ui, sans-serif;
+      overflow: hidden;
     }
-
-    // Load data from Firebase
-    async function loadFromFirebase() {
-        try {
-            updateSyncIndicator('syncing');
-            const docRef = doc(db, 'shared_data', 'production_data');
-            const docSnap = await getDoc(docRef);
-
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                
-                // Update global variables
-                if (data.companies) window.companies = data.companies;
-                if (data.products) window.products = data.products;
-                if (data.dailyJobs) window.dailyJobs = data.dailyJobs;
-                if (data.savedStartTime) {
-                    window.savedStartTime = data.savedStartTime;
-                    document.getElementById('shift-start').value = data.savedStartTime;
-                }
-
-                // Update localStorage as backup
-                localStorage.setItem('ht_companies', JSON.stringify(window.companies));
-                localStorage.setItem('ht_products', JSON.stringify(window.products));
-                localStorage.setItem('ht_daily_save', JSON.stringify(window.dailyJobs));
-                localStorage.setItem('ht_start_time', window.savedStartTime);
-
-                console.log('Data loaded from Firebase');
-            } else {
-                // No data in Firebase, upload current localStorage data
-                await saveToFirebase();
-            }
-            
-            window.firebaseLoaded = true;
-            updateSyncIndicator('online');
-            
-            // Render the UI
-            if (typeof window.renderDaily === 'function') window.renderDaily();
-            if (typeof window.renderSettings === 'function') window.renderSettings();
-            
-        } catch (error) {
-            console.error('Error loading from Firebase:', error);
-            updateSyncIndicator('offline');
-            window.firebaseLoaded = false;
-        }
-    }
-
-    // Save data to Firebase
-    async function saveToFirebase() {
-        if (window.isSyncing) return; // Prevent concurrent saves
-        
-        try {
-            window.isSyncing = true;
-            updateSyncIndicator('syncing');
-            
-            const docRef = doc(db, 'shared_data', 'production_data');
-            const data = {
-                companies: window.companies,
-                products: window.products,
-                dailyJobs: window.dailyJobs,
-                savedStartTime: window.savedStartTime,
-                lastUpdated: new Date().toISOString()
-            };
-
-            await setDoc(docRef, data);
-            console.log('Data saved to Firebase');
-            updateSyncIndicator('online');
-            
-        } catch (error) {
-            console.error('Error saving to Firebase:', error);
-            updateSyncIndicator('offline');
-        } finally {
-            window.isSyncing = false;
-        }
-    }
-
-    // Real-time listener for changes from other users
-    function setupRealtimeListener() {
-        const docRef = doc(db, 'shared_data', 'production_data');
-        
-        onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists() && window.firebaseLoaded) {
-                const data = docSnap.data();
-                
-                // Only update if data actually changed
-                const dataChanged = 
-                    JSON.stringify(window.companies) !== JSON.stringify(data.companies) ||
-                    JSON.stringify(window.products) !== JSON.stringify(data.products) ||
-                    JSON.stringify(window.dailyJobs) !== JSON.stringify(data.dailyJobs) ||
-                    window.savedStartTime !== data.savedStartTime;
-
-                if (dataChanged) {
-                    // Update global variables
-                    if (data.companies) window.companies = data.companies;
-                    if (data.products) window.products = data.products;
-                    if (data.dailyJobs) window.dailyJobs = data.dailyJobs;
-                    if (data.savedStartTime) {
-                        window.savedStartTime = data.savedStartTime;
-                        document.getElementById('shift-start').value = data.savedStartTime;
-                    }
-
-                    // Update localStorage
-                    localStorage.setItem('ht_companies', JSON.stringify(window.companies));
-                    localStorage.setItem('ht_products', JSON.stringify(window.products));
-                    localStorage.setItem('ht_daily_save', JSON.stringify(window.dailyJobs));
-                    localStorage.setItem('ht_start_time', window.savedStartTime);
-
-                    // Re-render UI
-                    if (typeof window.renderDaily === 'function') window.renderDaily();
-                    if (typeof window.renderSettings === 'function') window.renderSettings();
-                    
-                    console.log('Data updated from Firebase (real-time)');
-                }
-            }
-        }, (error) => {
-            console.error('Real-time listener error:', error);
-            updateSyncIndicator('offline');
-        });
-    }
-
-    // Expose functions globally
-    window.saveToFirebase = saveToFirebase;
-    window.loadFromFirebase = loadFromFirebase;
-
-    // Initialize Firebase data on page load
-    loadFromFirebase().then(() => {
-        setupRealtimeListener();
-    });
-</script>
-
-<script>
-    const PRELOAD_COMPANIES = [
-        "Ashahi", "FUZI SEIRA", "HOKUTO(北斗)", "Katsusika ネジ", "KHAMIDA", 
-        "KOYA-UCHI", "NDN", "TAKAO(高尾)", "Toushou(東証)", "YAMAMOTO(山本)", 
-        "YOSIDA(吉田)", "コーマ(KOMA)", "ゴトウ(GOTOU)", "コバユ(Kobayu)", 
-        "ボーセイ(Boshei)", "ヤサト(Yasato)", "ユーウ(Youu)", "信和(Shinwa)", 
-        "共和(Kyowa)", "前田(Maeda)", "太田(Oota)", "山下(Yamasita)", 
-        "日章(Nissho)", "東京ラセン(Tokyo Rasen)", "東洋(toyo)", 
-        "桂川(ktsuragawa)", "秋山(AKIYAMA)", "藤崎鋲螺(fujisaki)", "赤羽(Akabane)"
-    ];
-
-    let companies = JSON.parse(localStorage.getItem('ht_companies')) || [];
-    let products = JSON.parse(localStorage.getItem('ht_products')) || [];
-    let dailyJobs = JSON.parse(localStorage.getItem('ht_daily_save')) || [];
-    let savedStartTime = localStorage.getItem('ht_start_time') || "08:00";
+    input, select { font-size: 16px !important; } 
+    .ios-blur { backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); }
+    .scroll-container { height: calc(100vh - 140px); overflow-y: auto; }
+    .card-row { border-left: 3px solid transparent; transition: all 0.2s; }
+    .card-row:active { background: #1e293b; }
     
-    let currentEditingType = null;
-    let currentEditingId = null;
-
-    if (companies.length === 0) {
-        companies = PRELOAD_COMPANIES.map((name, index) => ({ id: Date.now() + index, name: name }));
-        companies.sort((a, b) => a.name.localeCompare(b.name));
-        localStorage.setItem('ht_companies', JSON.stringify(companies));
+    .search-result-item {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      color: #f8fafc;
+      font-weight: 500;
+      font-size: 13px;
     }
-
-    const companyColors = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6', '#fb7185', '#fb923c', '#22d3ee'];
-
-    function showToast(msg) {
-        const toast = document.getElementById('toast');
-        document.getElementById('toast-msg').innerText = msg;
-        toast.style.opacity = '1';
-        setTimeout(() => toast.style.opacity = '0', 1500);
+    .search-result-item:active {
+      background-color: #4f46e5;
+      color: white;
     }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+  </style>
+</head>
+<body class="text-slate-300">
+  <div id="root"></div>
 
-    function saveToStorage() {
-        localStorage.setItem('ht_companies', JSON.stringify(companies));
-        localStorage.setItem('ht_products', JSON.stringify(products));
-        localStorage.setItem('ht_daily_save', JSON.stringify(dailyJobs));
-        
-        // Save to Firebase
-        if (window.saveToFirebase && window.firebaseLoaded) {
-            window.saveToFirebase();
-        }
-    }
+  <script type="text/babel">
+    const { useState, useMemo, useEffect } = React;
 
-    function switchTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById(`content-${tab}`).classList.add('active');
-        document.querySelectorAll('nav button').forEach(btn => {
-            btn.classList.remove('bg-slate-700', 'text-white', 'shadow-sm');
-            btn.classList.add('text-slate-400');
-        });
-        const activeBtn = document.getElementById(`tab-${tab}`);
-        activeBtn.classList.remove('text-slate-400');
-        activeBtn.classList.add('bg-slate-700', 'text-white', 'shadow-sm');
-        
-        // Hide/Show FAB based on tab
-        const fab = document.getElementById('fab-add-job');
-        if (tab === 'daily') {
-            fab.style.display = 'flex';
-            renderDaily(); renderDailySearch();
-        } else {
-            fab.style.display = 'none';
-            renderSettings();
-        }
-    }
+    const INITIAL_MASTER_DATA = [
+    { name: 'Akabane133-24432-GB21',    qty: 20500, lots: 1, avgTime: 0.003   },
+      ];
 
-    function toggleModal(show) {
-        const modal = document.getElementById('edit-modal');
-        const overlay = document.getElementById('modal-overlay');
-        if(show) {
-            modal.classList.remove('hidden');
-            setTimeout(() => modal.classList.add('active'), 10);
-            overlay.classList.remove('hidden');
-        } else {
-            modal.classList.remove('active');
-            setTimeout(() => { modal.classList.add('hidden'); overlay.classList.add('hidden'); }, 300);
-        }
-    }
-
-    function openEditCompany(id) {
-        const company = companies.find(c => c.id === id);
-        if(!company) return;
-        currentEditingType = 'company';
-        currentEditingId = id;
-        document.getElementById('modal-title').innerText = "Edit Company";
-        document.getElementById('modal-content').innerHTML = `<input type="text" id="edit-val-name" value="${company.name}" class="form-input h-10 bg-slate-900">`;
-        toggleModal(true);
-    }
-
-    function openEditProduct(id) {
-        const prod = products.find(p => p.id === id);
-        if(!prod) return;
-        currentEditingType = 'product';
-        currentEditingId = id;
-        document.getElementById('modal-title').innerText = "Edit Product";
-        document.getElementById('modal-content').innerHTML = `
-            <input type="text" id="edit-val-name" value="${prod.name}" class="form-input h-10 bg-slate-900 mb-2">
-            <div class="grid grid-cols-2 gap-2">
-                <input type="number" step="0.0001" id="edit-val-std" value="${prod.std}" class="form-input h-10 bg-slate-900">
-                <input type="number" id="edit-val-gap" value="${prod.gap}" class="form-input h-10 bg-slate-900">
-            </div>
-        `;
-        toggleModal(true);
-    }
-
-    function confirmEdit() {
-        const name = document.getElementById('edit-val-name').value.trim();
-        if(!name) return;
-        if(currentEditingType === 'company') {
-            const index = companies.findIndex(c => c.id === currentEditingId);
-            if(index !== -1) companies[index].name = name;
-        } else if(currentEditingType === 'product') {
-            const std = parseFloat(document.getElementById('edit-val-std').value);
-            const gap = parseInt(document.getElementById('edit-val-gap').value);
-            const index = products.findIndex(p => p.id === currentEditingId);
-            if(index !== -1) { products[index].name = name; products[index].std = std; products[index].gap = gap; }
-        }
-        saveToStorage(); renderSettings(); closeModal(); showToast('Updated');
-    }
-
-    function closeModal() { toggleModal(false); }
-
-    function saveCompany() {
-        const nameEl = document.getElementById('comp-name');
-        if(!nameEl.value.trim()) return;
-        companies.push({ id: Date.now(), name: nameEl.value.trim() });
-        companies.sort((a, b) => a.name.localeCompare(b.name));
-        saveToStorage(); nameEl.value = ''; renderSettings();
-    }
-
-    function saveProduct() {
-        const compId = parseInt(document.getElementById('prod-comp').value);
-        const name = document.getElementById('prod-name').value.trim();
-        const std = parseFloat(document.getElementById('prod-std').value);
-        if(!compId || !name || isNaN(std)) return;
-        products.push({ 
-            id: Date.now(), compId, name, std, 
-            qty: parseFloat(document.getElementById('prod-qty').value) || 0, 
-            gap: parseInt(document.getElementById('prod-gap').value) || 65 
-        });
-        products.sort((a, b) => a.name.localeCompare(b.name));
-        saveToStorage(); renderSettings();
-        ['prod-name','prod-std','prod-qty'].forEach(id => document.getElementById(id).value = '');
-        document.getElementById('prod-gap').value = 65;
-    }
-
-    function getCompanyColor(compId) {
-        const index = companies.findIndex(c => c.id == compId);
-        return index !== -1 ? companyColors[index % companyColors.length] : '#334155';
-    }
-
-    function renderSettings() {
-        document.getElementById('company-list').innerHTML = companies.map(c => `
-            <li class="flex justify-between items-center p-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold">
-                <div class="flex items-center flex-grow pl-1">
-                    <div class="w-1.5 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                    <span class="text-slate-200">${c.name}</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                    <button onclick="openEditCompany(${c.id})" class="p-1.5 text-blue-400"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                    <button onclick="deleteCompany(${c.id})" class="p-1.5 text-red-400"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg></button>
-                </div>
-            </li>`).join('');
-            
-        document.getElementById('product-list').innerHTML = products.map(p => {
-            const comp = companies.find(c => c.id == p.compId);
-            return `
-            <li class="flex justify-between items-center p-1.5 bg-slate-800 border border-slate-700 rounded-lg text-[10px] font-bold">
-                <div class="flex flex-col flex-grow pl-1">
-                    <span class="text-slate-100">${p.name}</span>
-                    <span class="text-[8px] text-slate-500 font-normal uppercase">${comp ? comp.name : '?'} • Std: ${p.std} • Gap: ${p.gap || 65}</span>
-                </div>
-                <div class="flex items-center gap-1">
-                    <button onclick="openEditProduct(${p.id})" class="p-1.5 text-blue-400"><svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2.5" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
-                    <button onclick="deleteProduct(${p.id})" class="p-1.5 text-red-400"><svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg></button>
-                </div>
-            </li>`}).join('');
-            
-        document.getElementById('prod-comp').innerHTML = '<option value="">Select Company...</option>' + 
-            companies.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-    }
-
-    function deleteCompany(id) { if(confirm("Delete?")) { companies = companies.filter(c => c.id !== id); saveToStorage(); renderSettings(); } }
-    function deleteProduct(id) { if(confirm("Delete?")) { products = products.filter(p => p.id !== id); saveToStorage(); renderSettings(); } }
-
-    function renderDailySearch() {
-        const searchVal = document.getElementById('daily-comp-search').value.toLowerCase();
-        const resultsEl = document.getElementById('daily-search-results');
-        if (!searchVal) { resultsEl.classList.add('hidden'); return; }
-        const filtered = companies.filter(c => c.name.toLowerCase().includes(searchVal));
-        resultsEl.innerHTML = filtered.map(c => `
-            <div class="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-lg p-1.5">
-                <div class="flex items-center">
-                    <div class="w-1 h-3 rounded-full mr-2" style="background-color: ${getCompanyColor(c.id)}"></div>
-                    <span class="text-[10px] font-bold text-slate-200">${c.name}</span>
-                </div>
-                <button onclick="addJobByCompany(${c.id})" class="bg-blue-600 text-white px-2 py-0.5 rounded text-[8px] font-black uppercase">Add</button>
-            </div>
-        `).join('') || '<p class="text-center text-[8px] py-1 text-slate-500">No matches</p>';
-        resultsEl.classList.remove('hidden');
-    }
-
-    function addRow() { dailyJobs.push({ compId: '', prodId: '', qty: 0, lot: 1, gap: 65 }); renderDaily(); }
-    function addJobByCompany(compId) { dailyJobs.push({ compId: compId, prodId: '', qty: 0, lot: 1, gap: 65 }); document.getElementById('daily-comp-search').value = ''; renderDailySearch(); calculateSchedule(); showToast('Added'); }
-
-    function updateJob(index, field, value) {
-        const job = dailyJobs[index];
-        job[field] = value;
-        if (field === 'compId') job.prodId = '';
-        if (field === 'prodId') {
-            const prod = products.find(p => p.id == value);
-            if(prod) { 
-                job.qty = prod.qty || 0; 
-                job.gap = prod.gap !== undefined ? prod.gap : 65; 
-            }
-        }
-        calculateSchedule();
-    }
-
-    function calculateSchedule() {
-        const timeValue = document.getElementById('shift-start').value || "08:00";
-        savedStartTime = timeValue;
-        localStorage.setItem('ht_start_time', timeValue);
-        const [hours, minutes] = timeValue.split(':');
-        let timeline = new Date();
-        timeline.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        dailyJobs.forEach((job) => {
-            const prod = products.find(p => p.id == job.prodId);
-            job.startTime = new Date(timeline);
-            let baseDuration = 0;
-            if (prod) baseDuration = Math.round(parseFloat(job.qty) * parseFloat(prod.std)) + ((parseInt(job.lot) - 1) * 10);
-            job.durationMinutes = baseDuration;
-            job.endTime = new Date(job.startTime.getTime() + (baseDuration * 60000));
-            timeline = new Date(job.endTime.getTime() + ((parseInt(job.gap) || 0) * 60000));
-        });
-        renderDaily();
-    }
-
-    function formatT(date) { return date ? new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }) : "--:--"; }
-    function formatDuration(min) { return min > 60 ? `${Math.floor(min/60)}h ${min%60}m` : `${min}m`; }
-
-    function renderDaily() {
-        const tbody = document.getElementById('daily-body');
-        if (dailyJobs.length === 0) { tbody.innerHTML = ''; document.getElementById('empty-state').classList.remove('hidden'); return; }
-        document.getElementById('empty-state').classList.add('hidden');
-        
-        let lotOptions = '';
-        for(let i=1; i<=15; i++) lotOptions += `<option value="${i}">${i}</option>`;
-
-        tbody.innerHTML = dailyJobs.map((job, idx) => {
-            const filteredProds = products.filter(p => p.compId == job.compId);
-            return `
-            <tr class="border-b border-slate-700/50">
-                <td class="pl-3 py-2.5">
-                    <div class="flex items-center">
-                        <div class="company-pill" style="background-color: ${getCompanyColor(job.compId)}"></div>
-                        <div class="min-w-0">
-                            <select onchange="updateJob(${idx}, 'compId', this.value)" class="form-input text-[10px] font-black border-none p-0 h-4 focus:ring-0 bg-transparent truncate-name appearance-none text-slate-100">
-                                <option value="" class="bg-slate-800">Company...</option>
-                                ${companies.map(c => `<option value="${c.id}" ${job.compId == c.id ? 'selected' : ''} class="bg-slate-800">${c.name}</option>`).join('')}
-                            </select>
-                            <select onchange="updateJob(${idx}, 'prodId', this.value)" class="form-input text-[9px] text-slate-400 font-bold border-none p-0 h-3.5 focus:ring-0 bg-transparent truncate-name appearance-none">
-                                <option value="" class="bg-slate-800">Product...</option>
-                                ${filteredProds.map(p => `<option value="${p.id}" ${job.prodId == p.id ? 'selected' : ''} class="bg-slate-800">${p.name}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                </td>
-                <td class="text-center col-qty">
-                    <input type="number" value="${job.qty}" onchange="updateJob(${idx}, 'qty', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-8 bg-slate-900 border-slate-700">
-                </td>
-                <td class="text-center col-lot">
-                    <select onchange="updateJob(${idx}, 'lot', this.value)" class="form-input text-[10px] w-12 text-center font-bold p-0.5 h-8 bg-slate-900 border-slate-700 appearance-none">
-                        ${Array.from({length: 15}, (_, i) => `<option value="${i+1}" ${job.lot == i+1 ? 'selected' : ''}>${i+1}</option>`).join('')}
-                    </select>
-                </td>
-                <td class="text-center col-gap">
-                    <input type="number" value="${job.gap}" onchange="updateJob(${idx}, 'gap', this.value)" class="form-input text-[10px] w-10 text-center font-bold p-0.5 h-8 bg-slate-900 border-slate-700">
-                </td>
-                <td class="col-times">
-                    <div class="flex flex-col leading-none">
-                        <span class="text-blue-400 time-badge text-[9.5px]">${formatT(job.startTime)}</span>
-                        <span class="text-[6px] font-black text-slate-500 py-0.5 uppercase tracking-tighter">${formatDuration(job.durationMinutes)}</span>
-                        <span class="text-emerald-400 time-badge text-[9.5px]">${formatT(job.endTime)}</span>
-                    </div>
-                </td>
-                <td class="pr-3 text-right">
-                    <button onclick="removeJob(${idx})" class="text-slate-600 hover:text-red-400">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"/></svg>
-                    </button>
-                </td>
-            </tr>`;
-        }).join('');
-    }
-
-    function removeJob(idx) { dailyJobs.splice(idx, 1); calculateSchedule(); }
-    function resetDaily() { if(confirm("Clear schedule?")) { dailyJobs = []; renderDaily(); saveToStorage(); } }
-    function saveDaily() { saveToStorage(); showToast('Schedule Saved'); }
-
-    window.onload = () => {
-        document.getElementById('shift-start').value = savedStartTime;
-        switchTab('daily');
+    const formatTime = (mins) => {
+      const h = Math.floor((mins % 1440 + 1440) % 1440 / 60);
+      const m = Math.floor(mins % 60);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     };
-</script>
+
+    const formatDuration = (mins) => {
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      if (h > 0) return `${h}h ${m}m`;
+      return `${m}m`;
+    };
+
+    function App() {
+      const [schedule, setSchedule] = useState([]);
+      const [masterList, setMasterList] = useState(INITIAL_MASTER_DATA);
+      const [startTime, setStartTime] = useState('08:00');
+      const [searchTerm, setSearchTerm] = useState('');
+      const [isSaving, setIsSaving] = useState(false);
+      const [showSettings, setShowSettings] = useState(false);
+      const [masterCollapsed, setMasterCollapsed] = useState(false);
+
+      const [newProduct, setNewProduct] = useState({ name: '', qty: 0, lots: 1, avgTime: 0 });
+      const [bulkMessage, setBulkMessage] = useState('');
+
+      const parseCSVText = (text) => {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+        if (!lines.length) { setBulkMessage('No lines found in CSV'); return; }
+        const toAdd = [];
+        const skipped = [];
+        lines.forEach(ln => {
+          const parts = ln.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/).map(p => p.replace(/^\"|\"$/g, '').trim());
+          const name = parts[0];
+          if (!name) return;
+          if (masterList.some(m => m.name === name)) { skipped.push(name); return; }
+          const qty = parts[1] ? parseInt(parts[1], 10) || 0 : 0;
+          const lots = parts[2] ? parseInt(parts[2], 10) || 1 : 1;
+          const avgTime = parts[3] ? parseFloat(parts[3]) || 0 : 0;
+          toAdd.push({ name, qty, lots, avgTime });
+        });
+        if (toAdd.length) setMasterList(prev => [...prev, ...toAdd]);
+        setBulkMessage(`Added ${toAdd.length} products${skipped.length ? `, skipped ${skipped.length} duplicates` : ''}`);
+      };
+
+      const handleFileChange = (e) => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) { setBulkMessage('No file selected'); return; }
+        const reader = new FileReader();
+        reader.onload = (ev) => { parseCSVText(ev.target.result || ''); };
+        reader.readAsText(f);
+        e.target.value = '';
+      };
+
+      useEffect(() => {
+        const saved = localStorage.getItem('pc_compact_v5');
+        if (saved) {
+          const d = JSON.parse(saved);
+          setSchedule(d.schedule || []);
+          setStartTime(d.startTime || '08:00');
+          if (d.customMaster) {
+            setMasterList([...INITIAL_MASTER_DATA, ...d.customMaster]);
+          }
+        } else {
+          const p = INITIAL_MASTER_DATA[0];
+          setSchedule([{ id: Date.now(), productName: p.name, qty: p.qty, lots: p.lots, gap: 60 }]);
+        }
+      }, []);
+
+      const calculated = useMemo(() => {
+        let current = (Number(startTime.split(':')[0]) * 60) + Number(startTime.split(':')[1]);
+        return schedule.map(item => {
+          const meta = masterList.find(p => p.name === item.productName) || masterList[0];
+          const qtyNum = Number(item.qty) || 0;
+          const duration = Math.round(((qtyNum * meta.avgTime) + ((item.lots - 1) * 10)) / 5) * 5;
+          const start = current;
+          const end = start + duration;
+          current = end + (item.gap || 0);
+          return { ...item, start: formatTime(start), end: formatTime(end), duration };
+        });
+      }, [schedule, startTime, masterList]);
+
+      const save = () => {
+        setIsSaving(true);
+        const customItems = masterList.filter(m => !INITIAL_MASTER_DATA.some(i => i.name === m.name));
+        localStorage.setItem('pc_compact_v5', JSON.stringify({ 
+          schedule, 
+          startTime,
+          customMaster: customItems 
+        }));
+        setTimeout(() => setIsSaving(false), 500);
+      };
+
+      const addProductToSchedule = (pName) => {
+        const p = masterList.find(x => x.name === pName);
+        setSchedule([...schedule, { id: Date.now(), productName: p.name, qty: p.qty, lots: p.lots, gap: 60 }]);
+        setSearchTerm('');
+      };
+
+      const handleAddMasterProduct = () => {
+        if (!newProduct.name || masterList.some(p => p.name === newProduct.name)) return;
+        setMasterList([...masterList, newProduct]);
+        setNewProduct({ name: '', qty: 0, lots: 1, avgTime: 0 });
+      };
+
+      const deleteMasterProduct = (name) => {
+        if (INITIAL_MASTER_DATA.some(p => p.name === name)) return;
+        setMasterList(masterList.filter(p => p.name !== name));
+      };
+
+      const handleProductChange = (id, newName) => {
+        const p = masterList.find(x => x.name === newName);
+        setSchedule(schedule.map(s => s.id === id ? {
+          ...s, 
+          productName: newName, 
+          qty: p.qty, 
+          lots: p.lots 
+        } : s));
+      };
+
+      const range = (start, stop, step = 1) => Array.from({ length: (stop - start) / step + 1 }, (_, i) => start + (i * step));
+
+      return (
+        <div className="flex flex-col h-screen max-w-md mx-auto bg-black relative">
+          
+          <header className="pt-10 pb-2 px-3 bg-slate-900/80 ios-blur border-b border-white/5 relative z-[100]">
+            <div className="flex items-center gap-2">
+              <input 
+                type="time" 
+                value={startTime} 
+                onChange={e => setStartTime(e.target.value)}
+                className="bg-indigo-600 text-white font-bold px-2 py-1 rounded text-xs w-20 outline-none"
+              />
+              <div className="relative flex-grow">
+                <input 
+                  className="w-full bg-white/10 border border-white/10 rounded-md py-1 px-3 text-xs text-white placeholder-slate-400 focus:bg-white/20 focus:ring-1 focus:ring-indigo-500 outline-none"
+                  placeholder="Quick Add Search..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 rounded-lg shadow-[0_10px_40px_rgba(0,0,0,0.8)] border border-white/20 max-h-60 overflow-y-auto overflow-x-hidden">
+                    {masterList.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
+                      <div 
+                        key={p.name} 
+                        onClick={() => addProductToSchedule(p.name)} 
+                        className="search-result-item truncate"
+                      >
+                        {p.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button onClick={() => setShowSettings(!showSettings)} className="p-1.5 bg-slate-800 rounded-md border border-white/10 text-slate-300">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+              </button>
+              <button onClick={save} className={`text-[10px] font-bold px-3 py-1.5 rounded transition-colors ${isSaving ? 'bg-emerald-500 text-white' : 'bg-white text-black'}`}>
+                {isSaving ? '✓' : 'SAVE'}
+              </button>
+            </div>
+          </header>
+
+          <main className="scroll-container p-2 space-y-1.5 custom-scrollbar pb-32">
+            {calculated.map((item, idx) => (
+              <div key={item.id} className="card-row bg-slate-900/50 border border-white/5 rounded-lg p-2 relative">
+                <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${idx % 2 === 0 ? 'bg-indigo-500' : 'bg-cyan-500'}`}></div>
+                
+                <div className="flex justify-between items-start mb-1 pl-1">
+                  <select 
+                    value={item.productName}
+                    onChange={e => handleProductChange(item.id, e.target.value)}
+                    className="bg-transparent text-[13px] font-bold text-white w-2/3 truncate outline-none"
+                  >
+                    {masterList.map(p => <option key={p.name} value={p.name} className="bg-slate-900">{p.name}</option>)}
+                  </select>
+                  <div className="flex flex-col items-end">
+                    <div className="flex items-center gap-1 text-[13px] font-black">
+                      <span className="text-emerald-400">{item.start}</span>
+                      <span className="text-white/20">-</span>
+                      <span className="text-orange-400">{item.end}</span>
+                    </div>
+                    <div className="text-[10px] font-bold text-slate-500">
+                      {formatDuration(item.duration)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pl-1">
+                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 flex-grow max-w-[120px]">
+                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Qty</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      pattern="\d*"
+                      min="1"
+                      step="1"
+                      value={item.qty === '' ? '' : item.qty}
+                      onChange={e => {
+                        const v = e.target.value;
+                        if (v === '') {
+                          setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: '' } : s));
+                          return;
+                        }
+                        const n = parseInt(v, 10);
+                        const valid = !isNaN(n) && n > 0 ? n : 1;
+                        setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: valid } : s));
+                      }}
+                      className="bg-transparent text-[11px] font-bold text-white w-full outline-none"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[55px]">
+                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Lots</span>
+                    <select 
+                      value={item.lots} 
+                      onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, lots: parseInt(e.target.value)} : s))}
+                      className="bg-transparent text-[11px] font-bold text-white outline-none"
+                    >
+                      {range(1, 15).map(n => <option key={n} value={n} className="bg-slate-900">{n}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[65px]">
+                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Gap</span>
+                    <select 
+                      value={item.gap} 
+                      onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, gap: parseInt(e.target.value)} : s))}
+                      className="bg-transparent text-[11px] font-bold text-white outline-none"
+                    >
+                      {range(10, 150, 10).map(m => <option key={m} value={m} className="bg-slate-900">{m}m</option>)}
+                    </select>
+                  </div>
+                  <button onClick={() => setSchedule(schedule.filter(s => s.id !== item.id))} className="ml-auto text-slate-600 active:text-red-400 text-[14px] p-1 px-2">✕</button>
+                </div>
+              </div>
+            ))}
+          </main>
+
+          {showSettings && (
+            <div className="absolute inset-0 z-[200] bg-black/90 ios-blur flex flex-col p-4 animate-in fade-in slide-in-from-bottom-4 duration-200">
+              <div className="flex justify-between items-center mb-6 pt-6">
+                <h2 className="text-xl font-black text-white">Master Data Settings</h2>
+                <button onClick={() => setShowSettings(false)} className="bg-white/10 p-2 rounded-full text-white">✕</button>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-4 border border-white/10 mb-6">
+                <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Add New Product</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="text-[10px] text-slate-500 block mb-1">Product Name</label>
+                    <input className="w-full bg-black border border-white/10 rounded px-3 py-2 text-sm text-white outline-none focus:border-indigo-500" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} placeholder="e.g. Parts-99" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Standard Qty</label>
+                    <input type="number" inputMode="numeric" pattern="\d*" className="w-full bg-black border border-white/10 rounded px-3 py-2 text-sm text-white outline-none" value={newProduct.qty} onChange={e => setNewProduct({...newProduct, qty: parseInt(e.target.value)||0})} />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-500 block mb-1">Lots</label>
+                    <input type="number" inputMode="numeric" pattern="\d*" className="w-full bg-black border border-white/10 rounded px-3 py-2 text-sm text-white outline-none" value={newProduct.lots} onChange={e => setNewProduct({...newProduct, lots: parseInt(e.target.value)||1})} />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-[10px] text-slate-500 block mb-1">Avg Time (Mins per Unit)</label>
+                    <input type="number" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" step="0.0001" className="w-full bg-black border border-white/10 rounded px-3 py-2 text-sm text-white outline-none" value={newProduct.avgTime} onChange={e => setNewProduct({...newProduct, avgTime: parseFloat(e.target.value)||0})} />
+                  </div>
+                  <button onClick={handleAddMasterProduct} className="col-span-2 bg-indigo-600 text-white font-bold py-3 rounded-lg mt-2 active:scale-95 transition-transform">ADD TO MASTER LIST</button>
+                </div>
+              </div>
+
+              <div className="bg-slate-900 rounded-xl p-4 border border-white/10 mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Import CSV File</h3>
+                  <span className="text-[10px] text-slate-400">Use CSV: Name,Qty,Lots,AvgTime</span>
+                </div>
+                <input type="file" accept=".csv,text/csv" onChange={handleFileChange} className="w-full text-sm text-white mb-3" />
+                <div className="flex gap-2">
+                  <button onClick={() => setBulkMessage('')} className="bg-white/5 text-slate-300 py-2 px-3 rounded-lg">CLEAR MESSAGE</button>
+                  <div className="text-sm text-slate-400 ml-auto self-center">{bulkMessage}</div>
+                </div>
+              </div>
+
+              <div className="flex-grow overflow-y-auto custom-scrollbar">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Current Master Data</h3>
+                  <button
+                    onClick={() => setMasterCollapsed(!masterCollapsed)}
+                    className="text-sm text-slate-300 bg-white/5 px-2 py-1 rounded-md"
+                    aria-expanded={!masterCollapsed}
+                    aria-controls="master-data-list"
+                  >
+                    {masterCollapsed ? 'Open' : 'Close'}
+                  </button>
+                </div>
+
+                {!masterCollapsed && (
+                  <div id="master-data-list">
+                    {masterList.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 border-b border-white/5">
+                        <div className="truncate pr-4">
+                          <p className="text-sm font-bold text-white truncate">{p.name}</p>
+                          <p className="text-[10px] text-slate-500">Qty: {p.qty} | Lots: {p.lots} | T: {p.avgTime}</p>
+                        </div>
+                        {!INITIAL_MASTER_DATA.some(orig => orig.name === p.name) && (
+                          <button onClick={() => deleteMasterProduct(p.name)} className="text-red-500 text-xs font-bold p-2">DELETE</button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="fixed bottom-6 left-4 right-4 max-w-md mx-auto z-50">
+            <div className="flex justify-between items-end mb-4">
+              <div className="bg-indigo-600/90 text-white px-4 py-2 rounded-2xl shadow-2xl ios-blur border border-white/20">
+                <p className="text-[8px] font-black uppercase tracking-widest opacity-70">Shift Finish</p>
+                <p className="text-xl font-black">{calculated.length ? calculated[calculated.length-1].end : '--:--'}</p>
+              </div>
+              
+              <button 
+                onClick={() => addProductToSchedule(masterList[0].name)}
+                className="w-14 h-14 bg-white text-black rounded-full shadow-2xl flex items-center justify-center text-3xl font-light active:scale-90 transition-transform"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="text-center text-[7px] text-slate-600 uppercase tracking-[4px]">
+              Regmi Bimal Production System
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
