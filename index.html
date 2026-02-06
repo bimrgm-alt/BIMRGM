@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Pro Control Pro - Compact</title>
+  <title> Control Pro </title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -37,6 +37,7 @@
     .custom-scrollbar::-webkit-scrollbar { width: 4px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+    .drop-indicator { height: 6px; background: linear-gradient(90deg,#4f46e5,#06b6d4); border-radius: 4px; box-shadow: 0 6px 14px rgba(79,70,229,0.12); margin: 6px 0; }
   </style>
 </head>
 <body class="text-slate-300">
@@ -73,6 +74,8 @@
 
       const [newProduct, setNewProduct] = useState({ name: '', qty: 0, lots: 1, avgTime: 0 });
       const [bulkMessage, setBulkMessage] = useState('');
+      const [draggingId, setDraggingId] = useState(null);
+      const [dropTarget, setDropTarget] = useState({ id: null, pos: null });
 
       const parseCSVText = (text) => {
         const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
@@ -147,6 +150,47 @@
         setSearchTerm('');
       };
 
+      const onDragStart = (e, id) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(id));
+        setDraggingId(id);
+        setDropTarget({ id: null, pos: null });
+      };
+
+      const onDragOver = (e, id) => {
+        e.preventDefault();
+        const rect = e.currentTarget.getBoundingClientRect();
+        const offset = e.clientY - rect.top;
+        const pos = offset < rect.height / 2 ? 'before' : 'after';
+        setDropTarget({ id, pos });
+      };
+
+      const onDragLeave = (e, id) => {
+        const related = e.relatedTarget;
+        if (!related || !e.currentTarget.contains(related)) {
+          setDropTarget(prev => (prev && prev.id === id ? { id: null, pos: null } : prev));
+        }
+      };
+
+      const onDrop = (e, id) => {
+        e.preventDefault();
+        const dragId = e.dataTransfer.getData('text/plain') || draggingId;
+        if (!dragId) { setDropTarget({ id: null, pos: null }); setDraggingId(null); return; }
+        if (String(dragId) === String(id)) { setDropTarget({ id: null, pos: null }); setDraggingId(null); return; }
+        const dragIndex = schedule.findIndex(s => String(s.id) === String(dragId));
+        const dropIndex = schedule.findIndex(s => s.id === id);
+        if (dragIndex < 0 || dropIndex < 0) { setDropTarget({ id: null, pos: null }); setDraggingId(null); return; }
+        const newSched = [...schedule];
+        const [moved] = newSched.splice(dragIndex, 1);
+        const insertIndex = (dropTarget && dropTarget.pos === 'after') ? dropIndex + 1 : dropIndex;
+        newSched.splice(insertIndex, 0, moved);
+        setSchedule(newSched);
+        setDropTarget({ id: null, pos: null });
+        setDraggingId(null);
+      };
+
+      const onDragEnd = () => { setDraggingId(null); setDropTarget({ id: null, pos: null }); };
+
       const handleAddMasterProduct = () => {
         if (!newProduct.name || masterList.some(p => p.name === newProduct.name)) return;
         setMasterList([...masterList, newProduct]);
@@ -213,76 +257,88 @@
 
           <main className="scroll-container p-2 space-y-1.5 custom-scrollbar pb-32">
             {calculated.map((item, idx) => (
-              <div key={item.id} className="card-row bg-slate-900/50 border border-white/5 rounded-lg p-2 relative">
-                <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${idx % 2 === 0 ? 'bg-indigo-500' : 'bg-cyan-500'}`}></div>
-                
-                <div className="flex justify-between items-start mb-1 pl-1">
-                  <select 
-                    value={item.productName}
-                    onChange={e => handleProductChange(item.id, e.target.value)}
-                    className="bg-transparent text-[13px] font-bold text-white w-2/3 truncate outline-none"
-                  >
-                    {masterList.map(p => <option key={p.name} value={p.name} className="bg-slate-900">{p.name}</option>)}
-                  </select>
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center gap-1 text-[13px] font-black">
-                      <span className="text-emerald-400">{item.start}</span>
-                      <span className="text-white/20">-</span>
-                      <span className="text-orange-400">{item.end}</span>
-                    </div>
-                    <div className="text-[10px] font-bold text-slate-500">
-                      {formatDuration(item.duration)}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pl-1">
-                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 flex-grow max-w-[120px]">
-                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Qty</span>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      pattern="\d*"
-                      min="1"
-                      step="1"
-                      value={item.qty === '' ? '' : item.qty}
-                      onChange={e => {
-                        const v = e.target.value;
-                        if (v === '') {
-                          setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: '' } : s));
-                          return;
-                        }
-                        const n = parseInt(v, 10);
-                        const valid = !isNaN(n) && n > 0 ? n : 1;
-                        setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: valid } : s));
-                      }}
-                      className="bg-transparent text-[11px] font-bold text-white w-full outline-none"
-                    />
-                  </div>
+              <div key={item.id} className="relative">
+                {dropTarget.id === item.id && dropTarget.pos === 'before' && (<div className="drop-indicator"></div>)}
+                <div
+                  draggable={true}
+                  onDragStart={(e) => onDragStart(e, item.id)}
+                  onDragOver={(e) => onDragOver(e, item.id)}
+                  onDrop={(e) => onDrop(e, item.id)}
+                  onDragLeave={(e) => onDragLeave(e, item.id)}
+                  onDragEnd={onDragEnd}
+                  className={`card-row bg-slate-900/50 border border-white/5 rounded-lg p-2 relative ${draggingId === item.id ? 'opacity-50' : ''}`}
+                >
+                  <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-lg ${idx % 2 === 0 ? 'bg-indigo-500' : 'bg-cyan-500'}`}></div>
                   
-                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[55px]">
-                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Lots</span>
+                  <div className="flex justify-between items-start mb-1 pl-1">
                     <select 
-                      value={item.lots} 
-                      onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, lots: parseInt(e.target.value)} : s))}
-                      className="bg-transparent text-[11px] font-bold text-white outline-none"
+                      value={item.productName}
+                      onChange={e => handleProductChange(item.id, e.target.value)}
+                      className="bg-transparent text-[13px] font-bold text-white w-2/3 truncate outline-none"
                     >
-                      {range(1, 15).map(n => <option key={n} value={n} className="bg-slate-900">{n}</option>)}
+                      {masterList.map(p => <option key={p.name} value={p.name} className="bg-slate-900">{p.name}</option>)}
                     </select>
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1 text-[13px] font-black">
+                        <span className="text-emerald-400">{item.start}</span>
+                        <span className="text-white/20">-</span>
+                        <span className="text-orange-400">{item.end}</span>
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-500">
+                        {formatDuration(item.duration)}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[65px]">
-                    <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Gap</span>
-                    <select 
-                      value={item.gap} 
-                      onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, gap: parseInt(e.target.value)} : s))}
-                      className="bg-transparent text-[11px] font-bold text-white outline-none"
-                    >
-                      {range(10, 150, 10).map(m => <option key={m} value={m} className="bg-slate-900">{m}m</option>)}
-                    </select>
+                  <div className="flex items-center gap-2 pl-1">
+                    <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 flex-grow max-w-[120px]">
+                      <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Qty</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        pattern="\\d*"
+                        min="1"
+                        step="1"
+                        value={item.qty === '' ? '' : item.qty}
+                        onChange={e => {
+                          const v = e.target.value;
+                          if (v === '') {
+                            setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: '' } : s));
+                            return;
+                          }
+                          const n = parseInt(v, 10);
+                          const valid = !isNaN(n) && n > 0 ? n : 1;
+                          setSchedule(schedule.map(s => s.id === item.id ? { ...s, qty: valid } : s));
+                        }}
+                        className="bg-transparent text-[11px] font-bold text-white w-full outline-none"
+                      />
+                    </div>
+                    
+                    <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[55px]">
+                      <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Lots</span>
+                      <select 
+                        value={item.lots} 
+                        onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, lots: parseInt(e.target.value)} : s))}
+                        className="bg-transparent text-[11px] font-bold text-white outline-none"
+                      >
+                        {range(1, 15).map(n => <option key={n} value={n} className="bg-slate-900">{n}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="flex items-center bg-white/5 rounded px-2 py-0.5 border border-white/5 min-w-[65px]">
+                      <span className="text-[8px] font-bold text-slate-500 mr-2 uppercase">Gap</span>
+                      <select 
+                        value={item.gap} 
+                        onChange={e => setSchedule(schedule.map(s => s.id === item.id ? {...s, gap: parseInt(e.target.value)} : s))}
+                        className="bg-transparent text-[11px] font-bold text-white outline-none"
+                      >
+                        {range(10, 150, 10).map(m => <option key={m} value={m} className="bg-slate-900">{m}m</option>)}
+                      </select>
+                    </div>
+                    <button onClick={() => setSchedule(schedule.filter(s => s.id !== item.id))} className="ml-auto text-slate-600 active:text-red-400 text-[14px] p-1 px-2">✕</button>
                   </div>
-                  <button onClick={() => setSchedule(schedule.filter(s => s.id !== item.id))} className="ml-auto text-slate-600 active:text-red-400 text-[14px] p-1 px-2">✕</button>
                 </div>
+                {dropTarget.id === item.id && dropTarget.pos === 'after' && (<div className="drop-indicator"></div>)}
               </div>
             ))}
           </main>
