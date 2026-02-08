@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Continuous Loop Conveyor System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --belt-dark: #0d0d0d;
+            --belt-texture: #1a1a1a;
+            --frame-color: #2d3748;
+            --zone-p: rgba(59, 130, 246, 0.08); 
+            --zone-r: rgba(34, 197, 94, 0.08);
+            --steel-light: #4a5568;
+            --steel-dark: #1a202c;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1a1a2e 100%);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* Keyframe animations for realistic belt movement */
+        @keyframes beltScroll {
+            0% { background-position: 0 0; }
+            100% { background-position: 40px 0; }
+        }
+
+        @keyframes beltScrollReverse {
+            0% { background-position: 40px 0; }
+            100% { background-position: 0 0; }
+        }
+
+        @keyframes productRoll {
+            0% { transform: rotateZ(0deg); }
+            100% { transform: rotateZ(360deg); }
+        }
+
+        @keyframes uturnFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes beltPulse {
+            0%, 100% { box-shadow: 0 4px 10px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05); }
+            50% { box-shadow: 0 4px 15px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.08); }
+        }
+
+        @keyframes motorHum {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes rollerSpin {
+            0% { transform: rotateZ(0deg); }
+            100% { transform: rotateZ(360deg); }
+        }
+
+        .system-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            max-width: 1000px;
+            margin: 0 auto;
+            filter: drop-shadow(0 20px 25px rgba(0, 0, 0, 0.5));
+        }
+
+        .belt-wrapper {
+            position: relative;
+            background: linear-gradient(to bottom, #1a1a1a, #0d0d0d);
+            width: 100%;
+            border-left: 8px solid var(--frame-color);
+            border-right: 8px solid var(--frame-color);
+            box-shadow: 
+                0 10px 30px rgba(0,0,0,0.8),
+                inset 0 1px 0 rgba(255,255,255,0.05),
+                inset -1px 0 0 rgba(0,0,0,0.5);
+        }
+
+        .primary-wrapper { 
+            border-top: 8px solid var(--frame-color);
+            border-radius: 14px 14px 0 0;
+        }
+
+        .return-wrapper { 
+            border-bottom: 8px solid var(--frame-color);
+            border-radius: 0 0 14px 14px;
+        }
+
+        /* Roller elements */
+        .roller {
+            position: absolute;
+            width: 100%;
+            height: 14px;
+            background: radial-gradient(ellipse at center, #3a3a3a 0%, #1a1a1a 70%);
+            border-radius: 50%;
+            z-index: 3;
+            box-shadow: 
+                inset 0 2px 4px rgba(255,255,255,0.1),
+                inset 0 -2px 4px rgba(0,0,0,0.5),
+                0 2px 6px rgba(0,0,0,0.6);
+        }
+
+        .roller::before,
+        .roller::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 20px;
+            background: linear-gradient(90deg, #4a5568 0%, #2d3748 50%, #1a202c 100%);
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 2px;
+        }
+
+        .roller::before { left: -8px; }
+        .roller::after { right: -8px; }
+
+        .roller-top { top: 0; }
+        .roller-bottom { bottom: 0; }
+
+        .conveyor-belt {
+            height: 90px;
+            position: relative;
+            overflow: hidden;
+            background: var(--belt-dark);
+        }
+
+        .belt-texture {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--belt-dark);
+            background-image: 
+                repeating-linear-gradient(
+                    90deg,
+                    #1a1a1a 0px,
+                    #1a1a1a 2px,
+                    #0d0d0d 2px,
+                    #0d0d0d 4px
+                ),
+                repeating-linear-gradient(
+                    0deg,
+                    transparent 0px,
+                    transparent 10px,
+                    rgba(255,255,255,0.02) 10px,
+                    rgba(255,255,255,0.02) 11px
+                );
+            background-size: 4px 100%, 100% 20px;
+            background-position: 0 0;
+            background-attachment: fixed;
+            opacity: 0.95;
+            z-index: 2;
+            animation: beltScroll 0.8s linear infinite;
+        }
+
+        .belt-texture.return {
+            animation: beltScrollReverse 0.8s linear infinite;
+        }
+
+        /* Enhanced product styling */
+        .product {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+            border: 2px solid #64748b;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #1e293b;
+            font-weight: 900;
+            font-size: 0.75rem;
+            box-shadow: 
+                0 12px 20px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(255,255,255,0.1),
+                inset 0 2px 4px rgba(255,255,255,0.4),
+                inset 0 -2px 4px rgba(0,0,0,0.3);
+            z-index: 20;
+            transition: all 0.2s ease;
+            animation: productRoll 2s linear infinite;
+            perspective: 1000px;
+        }
+
+        .product::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 8px;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .product.u-turn {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
+            color: #78350f;
+            animation: uturnFloat 1.5s ease-in-out infinite, productRoll 2s linear infinite;
+        }
+
+        .product.return {
+            border-color: #22c55e;
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #15803d;
+        }
+
+        .zone-marker {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-bottom: 8px;
+            padding-left: 12px;
+            font-size: 0.55rem;
+            font-weight: 900;
+            z-index: 5;
+            border-right: 2px solid rgba(255,255,255,0.08);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            background: linear-gradient(to right, currentColor 0%, transparent 100%);
+            opacity: 0.8;
+        }
+
+        .zone-label-id {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+            font-weight: 900;
+        }
+
+        .u-turn-connector {
+            width: 100%;
+            height: 140px;
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+            position: relative;
+            border-left: 8px solid var(--frame-color);
+            border-right: 8px solid var(--frame-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 
+                inset 0 2px 8px rgba(0,0,0,0.5),
+                inset 0 -2px 8px rgba(255,255,255,0.02);
+        }
+
+        .u-turn-path {
+            width: 100px;
+            height: 110%;
+            border: 45px solid #000;
+            border-left: none;
+            border-radius: 0 120px 120px 0;
+            position: absolute;
+            right: -8px;
+            top: 0;
+            z-index: 1;
+            background: linear-gradient(to right, #1a1a1a, #0d0d0d);
+            box-shadow: 
+                inset 2px 0 8px rgba(255,255,255,0.05),
+                inset -2px 0 8px rgba(0,0,0,0.8);
+        }
+
+        .u-turn-label {
+            z-index: 10;
+            text-align: center;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(100, 116, 139, 0.5);
+            font-size: 0.75rem;
+            font-weight: 900;
+            color: #f59e0b;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            box-shadow: 
+                0 8px 16px rgba(0, 0, 0, 0.6),
+                0 0 20px rgba(245, 158, 11, 0.2);
+            animation: motorHum 2s ease-in-out infinite;
+        }
+
+        #uTurnTrack {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Header and controls styling */
+        header {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+            backdrop-filter: blur(10px);
+        }
+
+        .control-panel {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        input[type="range"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, rgba(100, 116, 139, 0.3), rgba(100, 116, 139, 0.5));
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fff, currentColor);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #fff, currentColor);
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        #addProduct {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            box-shadow: 
+                0 8px 16px rgba(59, 130, 246, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #addProduct::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        #addProduct:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 24px rgba(59, 130, 246, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        #addProduct:active {
+            transform: scale(0.95);
+        }
+
+        .clear-btn {
+            background: linear-gradient(135deg, #ef4444, #991b1b);
+            box-shadow: 
+                0 8px 16px rgba(239, 68, 68, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 12px 24px rgba(239, 68, 68, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        /* Tracking table enhancements */
+        .tracking-table {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
+            border: 1px solid rgba(100, 116, 139, 0.3);
+            backdrop-filter: blur(10px);
+            box-shadow: 
+                0 20px 40px rgba(0, 0, 0, 0.6),
+                inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        table tr {
+            transition: all 0.3s ease;
+            border-top: 1px solid rgba(100, 116, 139, 0.2);
+        }
+
+        table tbody tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        #auth-status {
+            font-size: 11px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 900;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            border: 1px solid currentColor;
+            opacity: 0.9;
+        }
+
+        #emptyState {
+            font-size: 0.95rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .conveyor-belt {
+                height: 70px;
+            }
+
+            .product {
+                width: 40px;
+                height: 40px;
+                font-size: 0.65rem;
+            }
+
+            .zone-marker {
+                font-size: 0.45rem;
+                padding-left: 6px;
+                padding-bottom: 4px;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-8 flex flex-col xl:flex-row justify-between items-end gap-4 border-b border-slate-700 pb-6">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-4xl font-black tracking-tighter text-blue-400 italic">M BELT 2 <span class="text-slate-500 font-light not-italic">LOOP</span></h1>
+                    <span id="auth-status" class="bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-[11px] font-black tracking-widest border border-green-500/30">LOCAL STORAGE</span>
+                </div>
+                <p class="text-slate-500 font-medium text-sm mt-2">Zonal Facility Flow Management System</p>
+            </div>
+            
+            <div class="control-panel flex flex-wrap items-center gap-6 p-5 rounded-xl">
+                <div class="flex flex-col gap-2">
+                    <label class="text-[11px] uppercase text-blue-400 font-black tracking-widest">HQ Line (mm/m)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="speedP" min="66" max="230" value="120" class="w-32" style="--primary-color: #3b82f6;">
+                        <span id="valP" class="text-xs font-mono w-10 text-blue-300 font-bold">120</span>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[11px] uppercase text-green-400 font-black tracking-widest">HT Line (mm/m)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="range" id="speedR" min="100" max="144" value="120" class="w-32" style="--primary-color: #22c55e;">
+                        <span id="valR" class="text-xs font-mono w-10 text-green-300 font-bold">120</span>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <label class="text-[11px] uppercase text-amber-500 font-black tracking-widest">Buffer (FIXED)</label>
+                    <div class="flex items-center gap-2">
+                        <div class="w-32 px-3 py-2 rounded bg-slate-900/50 border border-slate-700 text-amber-300 font-bold text-sm text-center">
+                            25 min
+                        </div>
+                    </div>
+                </div>
+                <button id="addProduct" class="text-white px-6 py-3 rounded-lg font-black uppercase tracking-tighter transition-all active:scale-95">
+                    Load Unit
+                </button>
+                <button id="clearBtn" class="clear-btn text-white px-4 py-3 rounded-lg font-black uppercase tracking-tighter transition-all active:scale-95 text-xs" title="Clear all completed jobs">
+                    Clear
+                </button>
+            </div>
+        </header>
+
+        <div class="system-layout mb-12">
+            <div class="belt-wrapper primary-wrapper">
+                <div class="roller roller-top"></div>
+                <div class="mb-1 text-[11px] text-slate-500 font-black px-3 pt-2 flex justify-between">
+                    <span>HQ LINE (7980mm)</span>
+                    <span id="pCount">UNITS: 0</span>
+                </div>
+                <div class="conveyor-belt" id="belt1">
+                    <div class="belt-texture" id="texture1"></div>
+                    <div class="zone-marker" style="left: 0%; width: 20%; background: var(--zone-p)"><div class="zone-label-id">01</div>ENTRY</div>
+                    <div class="zone-marker" style="left: 20%; width: 20%; background: var(--zone-p)"><div class="zone-label-id">02</div>SORT</div>
+                    <div class="zone-marker" style="left: 40%; width: 20%; background: var(--zone-p)"><div class="zone-label-id">03</div>PROCESS</div>
+                    <div class="zone-marker" style="left: 60%; width: 20%; background: var(--zone-p)"><div class="zone-label-id">04</div>SCAN</div>
+                    <div class="zone-marker" style="left: 80%; width: 20%; background: var(--zone-p); border:none"><div class="zone-label-id">05</div>EXPORT</div>
+                </div>
+                <div class="roller roller-bottom"></div>
+            </div>
+
+            <div class="u-turn-connector">
+                <div class="u-turn-path"></div>
+                <div class="u-turn-label">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 7v5l3 3"/></svg>
+                        U-TURN BUFFER
+                    </div>
+                    <div class="text-[11px] mt-1 opacity-70">Units: <span id="uturnCount">0</span></div>
+                </div>
+                <div id="uTurnTrack" class="absolute inset-0 overflow-hidden pointer-events-none"></div>
+            </div>
+
+            <div class="belt-wrapper return-wrapper">
+                <div class="roller roller-top"></div>
+                <div class="conveyor-belt" id="belt2">
+                    <div class="belt-texture return" id="texture2"></div>
+                    <div class="zone-marker" style="left: 0%; width: 25%; background: var(--zone-r)"><div class="zone-label-id">01</div>RE-ENTRY</div>
+                    <div class="zone-marker" style="left: 25%; width: 25%; background: var(--zone-r)"><div class="zone-label-id">02</div>RETURN-A</div>
+                    <div class="zone-marker" style="left: 50%; width: 25%; background: var(--zone-r)"><div class="zone-label-id">03</div>RETURN-B</div>
+                    <div class="zone-marker" style="left: 75%; width: 25%; background: var(--zone-r); border:none"><div class="zone-label-id">04</div>DISCHARGE</div>
+                </div>
+                <div class="roller roller-bottom"></div>
+                <div class="mt-1 text-[11px] text-slate-500 font-black px-3 pb-2 flex justify-between">
+                    <span>HT LINE (7200mm)</span>
+                    <span id="rCount">UNITS: 0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="tracking-table rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+            <table class="w-full text-xs text-left">
+                <thead class="bg-slate-800/50 text-slate-500 uppercase font-black tracking-widest">
+                    <tr>
+                        <th class="px-6 py-4">Serial ID</th>
+                        <th class="px-6 py-4">Line Segment</th>
+                        <th class="px-6 py-4">Zonal Location</th>
+                        <th class="px-6 py-4">Elapsed Time</th>
+                        <th class="px-6 py-4">Remaining Time</th>
+                        <th class="px-6 py-4 text-right">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="trackingBody"></tbody>
+            </table>
+            <div id="emptyState" class="p-12 text-center">System Clear. Load unit to begin cycle.</div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const P_LENGTH = 7980;  // HQ line length in mm
+        const R_LENGTH = 7200;  // HT line length in mm
+        const SAVE_INTERVAL = 500; // Save to localStorage frequently
+
+        const STORAGE_KEY = 'conveyor_jobs';
+
+        const state = {
+            speedP: 120,  // Default HQ speed
+            speedR: 120,  // Default HT speed
+            bufferMin: 25,  // Fixed at 25 minutes
+            products: [],
+            counter: 1,
+            lastFrame: performance.now(),
+            lastDbSave: 0,
+            offsets: [0, 0],
+            isReady: true
+        };
+
+        const speedP_El = document.getElementById('speedP');
+        const speedR_El = document.getElementById('speedR');
+        const trackingBody = document.getElementById('trackingBody');
+        const emptyState = document.getElementById('emptyState');
+        const addBtn = document.getElementById('addProduct');
+        const clearBtn = document.getElementById('clearBtn');
+
+        // Buffer time is FIXED at 25 minutes
+        const BUFFER_TIME_MINUTES = 25;
+
+        // LocalStorage functions
+        function saveToLocalStorage() {
+            try {
+                const dataToSave = state.products.map(p => ({
+                    id: p.id,
+                    stage: p.stage,
+                    pos: p.pos,
+                    entryTime: p.entryTime,
+                    uturnStart: p.uturnStart,
+                    currentZone: p.currentZone
+                }));
+                localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                    products: dataToSave,
+                    counter: state.counter,
+                    speedP: state.speedP,
+                    speedR: state.speedR,
+                    timestamp: Date.now()
+                }));
+            } catch (err) {
+                console.error("Storage save failed:", err);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    state.products = data.products.map(p => ({ 
+                        ...p, 
+                        element: null 
+                    }));
+                    state.counter = data.counter || 1;
+                    
+                    // Load saved speed settings
+                    if (data.speedP) {
+                        state.speedP = data.speedP;
+                        speedP_El.value = data.speedP;
+                        document.getElementById('valP').innerText = data.speedP;
+                    }
+                    if (data.speedR) {
+                        state.speedR = data.speedR;
+                        speedR_El.value = data.speedR;
+                        document.getElementById('valR').innerText = data.speedR;
+                    }
+                    
+                    updateEmptyState();
+                }
+            } catch (err) {
+                console.error("Storage load failed:", err);
+            }
+        }
+
+        function clearLocalStorage() {
+            if (confirm('Clear all completed jobs?')) {
+                state.products = state.products.filter(p => p.stage !== 'completed');
+                saveToLocalStorage();
+                updateEmptyState();
+            }
+        }
+
+        // Initialize on load
+        loadFromLocalStorage();
+
+        function createProduct() {
+            const id = `U-${state.counter++}`;
+            const newProduct = {
+                id, 
+                stage: 'p-belt', 
+                pos: 0, 
+                entryTime: Date.now(),
+                uturnStart: 0,
+                currentZone: 1
+            };
+            state.products.push({ ...newProduct, element: null });
+            updateEmptyState();
+            saveToLocalStorage();
+        }
+
+        addBtn.addEventListener('click', createProduct);
+        clearBtn.addEventListener('click', clearLocalStorage);
+
+        // Save speed settings when operator changes them
+        speedP_El.addEventListener('change', () => {
+            state.speedP = parseInt(speedP_El.value);
+            saveToLocalStorage();
+            console.log('HQ speed saved:', state.speedP);
+        });
+
+        speedR_El.addEventListener('change', () => {
+            state.speedR = parseInt(speedR_El.value);
+            saveToLocalStorage();
+            console.log('HT speed saved:', state.speedR);
+        });
+
+        function formatElapsedTime(ms) {
+            if (ms <= 0) return "0m 0s";
+            const s = Math.floor(ms / 1000);
+            const m = Math.floor(s / 60);
+            return `${m}m ${s % 60}s`;
+        }
+
+        function formatClockTime(timestamp) {
+            if (!timestamp) return "--:--:--";
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        let isPageVisible = true;
+        let pauseTime = 0;
+
+        function animate(now) {
+            // Handle visibility - if not visible, just save and return
+            if (!isPageVisible) {
+                requestAnimationFrame(animate);
+                return;
+            }
+
+            const dt = (now - state.lastFrame) / 1000;
+            state.lastFrame = now;
+
+            state.speedP = parseInt(speedP_El.value);
+            state.speedR = parseInt(speedR_El.value);
+            document.getElementById('valP').innerText = state.speedP;
+            document.getElementById('valR').innerText = state.speedR;
+
+            const bufferMs = BUFFER_TIME_MINUTES * 60 * 1000;
+
+            state.offsets[0] = (state.offsets[0] + (state.speedP / 60) * dt * 2) % 40;
+            state.offsets[1] = (state.offsets[1] - (state.speedR / 60) * dt * 2) % 40;
+            document.getElementById('texture1').style.transform = `translateX(${state.offsets[0]}px)`;
+            document.getElementById('texture2').style.transform = `translateX(${state.offsets[1]}px)`;
+
+            let utCount = 0, pCnt = 0, rCnt = 0;
+
+            for (let i = state.products.length - 1; i >= 0; i--) {
+                const p = state.products[i];
+                
+                if (p.stage === 'p-belt') {
+                    pCnt++;
+                    p.pos += (state.speedP / 60) * dt;
+                    if (!p.element) {
+                        p.element = document.createElement('div');
+                        p.element.className = 'product';
+                        p.element.innerText = p.id;
+                        document.getElementById('belt1').appendChild(p.element);
+                    }
+                    const pct = (p.pos / P_LENGTH);
+                    p.element.style.left = `calc(${pct * 100}% - 24px)`;
+                    p.element.style.top = '20px';
+                    p.currentZone = Math.min(5, Math.floor(pct * 5) + 1);
+
+                    if (p.pos >= P_LENGTH) {
+                        p.stage = 'u-turn';
+                        p.uturnStart = Date.now();
+                        p.pos = 0;
+                        p.element.remove();
+                        p.element = null;
+                    }
+                } 
+                else if (p.stage === 'u-turn') {
+                    utCount++;
+                    const elapsed = Date.now() - p.uturnStart;
+                    if (!p.element) {
+                        p.element = document.createElement('div');
+                        p.element.className = 'product u-turn';
+                        p.element.innerText = p.id;
+                        document.getElementById('uTurnTrack').appendChild(p.element);
+                    }
+                    const pathProgress = Math.min(elapsed / 5000, 1); 
+                    const x = Math.sin(pathProgress * Math.PI) * 100;
+                    p.element.style.right = `calc(10px + ${x}px)`;
+                    p.element.style.top = `${pathProgress * 100}px`;
+
+                    if (elapsed >= bufferMs) {
+                        p.stage = 'r-belt';
+                        p.pos = 0;
+                        p.element.remove();
+                        p.element = null;
+                    }
+                } 
+                else if (p.stage === 'r-belt') {
+                    rCnt++;
+                    p.pos += (state.speedR / 60) * dt;
+                    if (!p.element) {
+                        p.element = document.createElement('div');
+                        p.element.className = 'product return';
+                        p.element.innerText = p.id;
+                        document.getElementById('belt2').appendChild(p.element);
+                    }
+                    const pct = (p.pos / R_LENGTH);
+                    p.element.style.right = `calc(${pct * 100}% - 24px)`;
+                    p.element.style.top = '20px';
+                    p.currentZone = Math.min(4, Math.floor(pct * 4) + 1);
+
+                    if (p.pos >= R_LENGTH) {
+                        p.stage = 'completed';
+                        p.element.remove();
+                        p.element = null;
+                    }
+                }
+            }
+
+            document.getElementById('uturnCount').innerText = utCount;
+            document.getElementById('pCount').innerText = `UNITS: ${pCnt}`;
+            document.getElementById('rCount').innerText = `UNITS: ${rCnt}`;
+
+            if (state.products.length > 0) {
+                renderTable();
+                if (now - state.lastDbSave > SAVE_INTERVAL) {
+                    state.lastDbSave = now;
+                    saveToLocalStorage();
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+
+        function renderTable() {
+            let html = '';
+            const bufferMs = BUFFER_TIME_MINUTES * 60 * 1000;
+            
+            state.products.forEach(p => {
+                let segment = `<span class="text-blue-400 font-bold">PRIMARY</span>`;
+                let zone = `Zone ${p.currentZone || 1}`;
+                let statusDisplay = `<span class="text-slate-400 text-xs">In Progress</span>`;
+                let remainingTimeDisplay = `<span class="text-slate-400 font-mono">Calculating...</span>`;
+                
+                const elapsedSinceLoad = Date.now() - (p.entryTime || Date.now());
+                
+                // Calculate remaining time based on current stage
+                if (p.stage === 'p-belt') {
+                    // Estimate time remaining on primary belt based on current position
+                    const remainingDistance = P_LENGTH - p.pos;
+                    const remainingTimeMs = (remainingDistance / (state.speedP / 60)) * 1000;
+                    remainingTimeDisplay = `<span class="text-blue-400 font-mono font-bold">${formatElapsedTime(remainingTimeMs)}</span>`;
+                } 
+                else if (p.stage === 'u-turn') {
+                    segment = `<span class="text-amber-500 font-bold">BUFFER</span>`;
+                    zone = "U-Turn Path";
+                    statusDisplay = `<span class="text-amber-500 text-xs">Buffer Hold</span>`;
+                    
+                    // Buffer time remaining
+                    const uturnElapsed = Date.now() - p.uturnStart;
+                    const remainingBuffer = bufferMs - uturnElapsed;
+                    if (remainingBuffer > 0) {
+                        remainingTimeDisplay = `<span class="text-amber-500 font-mono font-bold">${formatElapsedTime(remainingBuffer)}</span>`;
+                    } else {
+                        remainingTimeDisplay = `<span class="text-amber-600 font-mono">Ready</span>`;
+                    }
+                } 
+                else if (p.stage === 'r-belt') {
+                    segment = `<span class="text-green-500 font-bold">RETURN</span>`;
+                    zone = `Zone ${p.currentZone || 1}`;
+                    statusDisplay = `<span class="text-green-500 text-xs">On Return</span>`;
+                    
+                    // Estimate time remaining on return belt
+                    const remainingDistance = R_LENGTH - p.pos;
+                    const remainingTimeMs = (remainingDistance / (state.speedR / 60)) * 1000;
+                    remainingTimeDisplay = `<span class="text-green-400 font-mono font-bold">${formatElapsedTime(remainingTimeMs)}</span>`;
+                } 
+                else if (p.stage === 'completed') {
+                    segment = `<span class="text-emerald-500 font-bold">COMPLETE</span>`;
+                    zone = "Discharged";
+                    statusDisplay = `<span class="status-badge status-completed">✓ Completed</span>`;
+                    remainingTimeDisplay = `<span class="text-slate-600 font-mono">--:--</span>`;
+                }
+                
+                html += `<tr>
+                    <td class="px-6 py-4 font-black text-slate-300">${p.id}</td>
+                    <td class="px-6 py-4 uppercase text-[11px] tracking-widest">${segment}</td>
+                    <td class="px-6 py-4 font-medium text-slate-400">${zone}</td>
+                    <td class="px-6 py-4 font-mono text-slate-400">${formatElapsedTime(elapsedSinceLoad)}</td>
+                    <td class="px-6 py-4">${remainingTimeDisplay}</td>
+                    <td class="px-6 py-4 text-right">${statusDisplay}</td>
+                </tr>`;
+            });
+            trackingBody.innerHTML = html;
+        }
+
+        function updateEmptyState() { 
+            const activeJobs = state.products.filter(p => p.stage !== 'completed').length;
+            if (emptyState) emptyState.style.display = activeJobs === 0 ? 'block' : 'none'; 
+        }
+
+        // Handle page visibility changes - pause when minimized/hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // App is hidden (minimized or tab switched)
+                isPageVisible = false;
+                pauseTime = performance.now();
+                console.log('App minimized - jobs paused');
+                saveToLocalStorage();
+            } else {
+                // App is visible again
+                isPageVisible = true;
+                // Reset lastFrame to current time to avoid time jump
+                state.lastFrame = performance.now();
+                console.log('App resumed - jobs continue');
+            }
+        });
+
+        // Save state before page unload
+        window.addEventListener('beforeunload', () => {
+            saveToLocalStorage();
+        });
+        
+        requestAnimationFrame(animate);
+    </script>
+</body>
+</html>
