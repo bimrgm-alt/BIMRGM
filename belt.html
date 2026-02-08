@@ -402,6 +402,31 @@
                 inset 0 1px 0 rgba(255,255,255,0.3);
         }
 
+        .calculator-btn {
+            background: linear-gradient(135deg, #ec4899, #a855f7);
+            box-shadow: 
+                0 8px 16px rgba(236, 72, 153, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
+            text-decoration: none;
+        }
+
+        .calculator-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 
+                0 12px 24px rgba(236, 72, 153, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+        }
+
+        .calculator-btn:active {
+            transform: scale(0.95);
+        }
+
         /* Tracking table enhancements */
         .tracking-table {
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.6), rgba(15, 23, 42, 0.6));
@@ -429,6 +454,16 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             border: 1px solid currentColor;
             opacity: 0.9;
+            transition: all 0.3s ease;
+        }
+
+        #auth-status.background-mode {
+            animation: pulse-glow 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
         }
 
         #emptyState {
@@ -455,30 +490,302 @@
             border: 1px solid rgba(34, 197, 94, 0.5);
         }
 
-        /* Responsive design */
+        #addProduct, #clearBtn, .calculator-btn {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        input[type="range"] {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+
+        /* Mobile table optimization */
+        @media (max-width: 640px) {
+            table thead {
+                display: none;
+            }
+
+            table, tbody, tr, td {
+                display: block;
+                width: 100%;
+            }
+
+            tr {
+                margin-bottom: 1rem;
+                border: 1px solid rgba(100, 116, 139, 0.3);
+                padding: 0.5rem;
+                border-radius: 6px;
+            }
+
+            td {
+                padding: 0.5rem 0 !important;
+                padding-left: 0 !important;
+                text-align: left;
+                border: none;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            td::before {
+                content: attr(data-label);
+                font-weight: 700;
+                color: #94a3b8;
+                min-width: 80px;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+            }
+
+            table tbody tr {
+                border-top: 1px solid rgba(100, 116, 139, 0.2) !important;
+            }
+        }
         @media (max-width: 768px) {
+            body {
+                padding: 0;
+                overflow-x: hidden;
+            }
+
+            .max-w-6xl {
+                max-width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
+            header {
+                margin-bottom: 0.5rem !important;
+                padding: 1rem !important;
+                gap: 1rem !important;
+                border-radius: 0;
+            }
+
+            h1 {
+                font-size: 1.5rem !important;
+            }
+
+            .control-panel {
+                flex-direction: column;
+                gap: 0.75rem !important;
+                width: 100% !important;
+                padding: 1rem !important;
+                border-radius: 0 !important;
+            }
+
+            .control-panel > div {
+                width: 100%;
+            }
+
+            .control-panel input[type="range"] {
+                width: 100%;
+            }
+
+            #addProduct, #clearBtn, .calculator-btn {
+                width: 100%;
+                padding: 0.75rem !important;
+                font-size: 0.875rem;
+            }
+
+            .system-layout {
+                margin-bottom: 1rem !important;
+            }
+
+            .belt-wrapper {
+                border-left-width: 4px !important;
+                border-right-width: 4px !important;
+                border-top-width: 4px !important;
+                border-bottom-width: 4px !important;
+            }
+
+            .primary-wrapper {
+                border-radius: 8px 8px 0 0 !important;
+            }
+
+            .return-wrapper {
+                border-radius: 0 0 8px 8px !important;
+            }
+
             .conveyor-belt {
-                height: 70px;
+                height: 60px !important;
+                min-height: 60px;
             }
 
             .product {
-                width: 40px;
-                height: 40px;
-                font-size: 0.65rem;
+                width: 36px !important;
+                height: 36px !important;
+                font-size: 0.6rem !important;
             }
 
             .zone-marker {
-                font-size: 0.45rem;
-                padding-left: 6px;
-                padding-bottom: 4px;
+                font-size: 0.4rem !important;
+                padding-left: 4px !important;
+                padding-bottom: 3px !important;
+            }
+
+            .zone-label-id {
+                font-size: 0.7rem !important;
+            }
+
+            .mb-1, .mt-1 {
+                font-size: 10px !important;
+                padding: 0.25rem 0.5rem !important;
+                margin: 0 !important;
+            }
+
+            .u-turn-connector {
+                height: 100px !important;
+                padding: 0.5rem !important;
+            }
+
+            .u-turn-path {
+                border-width: 30px !important;
+                width: 70px !important;
+            }
+
+            .u-turn-label {
+                padding: 8px 12px !important;
+                font-size: 0.65rem !important;
+                border-radius: 16px !important;
+            }
+
+            .u-turn-label svg {
+                width: 3px !important;
+                height: 3px !important;
+            }
+
+            .tracking-table {
+                border-radius: 8px !important;
+                overflow-x: auto;
+                margin: 0;
+            }
+
+            table {
+                font-size: 0.7rem !important;
+            }
+
+            table th, table td {
+                padding: 0.5rem !important;
+            }
+
+            #emptyState {
+                padding: 1.5rem !important;
+                font-size: 0.8rem !important;
+            }
+
+            .roller {
+                height: 10px !important;
+            }
+
+            .roller::before,
+            .roller::after {
+                width: 6px !important;
+                height: 16px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.25rem;
+            }
+
+            h1 {
+                font-size: 1.25rem !important;
+            }
+
+            #auth-status {
+                font-size: 9px !important;
+                padding: 4px 8px !important;
+            }
+
+            header {
+                padding: 0.75rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .control-panel {
+                padding: 0.75rem !important;
+                gap: 0.5rem !important;
+            }
+
+            .control-panel > div label {
+                font-size: 9px !important;
+            }
+
+            .control-panel > div span {
+                font-size: 10px !important;
+            }
+
+            #addProduct, #clearBtn, .calculator-btn {
+                padding: 0.5rem !important;
+                font-size: 0.75rem !important;
+            }
+
+            .conveyor-belt {
+                height: 50px !important;
+            }
+
+            .product {
+                width: 32px !important;
+                height: 32px !important;
+                font-size: 0.55rem !important;
+            }
+
+            .zone-marker {
+                display: none;
+            }
+
+            .mb-1, .mt-1 {
+                font-size: 8px !important;
+            }
+
+            .u-turn-connector {
+                height: 80px !important;
+            }
+
+            .u-turn-path {
+                border-width: 20px !important;
+                width: 50px !important;
+            }
+
+            .u-turn-label {
+                padding: 6px 10px !important;
+                font-size: 0.6rem !important;
+            }
+
+            table {
+                font-size: 0.65rem !important;
+            }
+
+            table th, table td {
+                padding: 0.35rem !important;
+            }
+
+            table th:nth-child(3),
+            table th:nth-child(4),
+            table th:nth-child(5) {
+                display: none;
+            }
+
+            table td:nth-child(3),
+            table td:nth-child(4),
+            table td:nth-child(5) {
+                display: none;
+            }
+
+            #emptyState {
+                padding: 1rem !important;
+                font-size: 0.7rem !important;
             }
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
+<body class="p-2 md:p-4 lg:p-8">
 
     <div class="max-w-6xl mx-auto">
-        <header class="mb-8 flex flex-col xl:flex-row justify-between items-end gap-4 border-b border-slate-700 pb-6">
+        <header class="mb-2 md:mb-8 flex flex-col justify-between items-start md:items-end gap-2 md:gap-4 border-b border-slate-700 pb-3 md:pb-6">
             <div>
                 <div class="flex items-center gap-3">
                     <h1 class="text-4xl font-black tracking-tighter text-blue-400 italic">M BELT 2 <span class="text-slate-500 font-light not-italic">LOOP</span></h1>
@@ -516,17 +823,8 @@
                 <button id="clearBtn" class="clear-btn text-white px-4 py-3 rounded-lg font-black uppercase tracking-tighter transition-all active:scale-95 text-xs" title="Clear all completed jobs">
                     Clear
                 </button>
-                <a href="index.html" title="Open Calculator" class="ml-2 bg-slate-800 hover:bg-slate-700 p-3 rounded-lg text-white flex items-center justify-center" style="width:44px;height:44px">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="3" y="2" width="18" height="20" rx="2" ry="2"></rect>
-                        <line x1="8" y1="6" x2="16" y2="6"></line>
-                        <line x1="8" y1="12" x2="8" y2="12"></line>
-                        <line x1="12" y1="12" x2="12" y2="12"></line>
-                        <line x1="16" y1="12" x2="16" y2="12"></line>
-                        <line x1="8" y1="16" x2="8" y2="16"></line>
-                        <line x1="12" y1="16" x2="12" y2="16"></line>
-                        <line x1="16" y1="16" x2="16" y2="16"></line>
-                    </svg>
+                <a href="index.html" id="calcBtn" class="calculator-btn text-white p-3 rounded-lg font-black transition-all active:scale-95 text-lg" title="Open Calculator">
+                    🧮
                 </a>
             </div>
         </header>
@@ -620,6 +918,7 @@
         const speedR_El = document.getElementById('speedR');
         const trackingBody = document.getElementById('trackingBody');
         const emptyState = document.getElementById('emptyState');
+        const authStatus = document.getElementById('auth-status');
         const addBtn = document.getElementById('addProduct');
         const clearBtn = document.getElementById('clearBtn');
 
@@ -736,9 +1035,67 @@
 
         let isPageVisible = true;
         let pauseTime = 0;
+        let backgroundInterval = null;
+
+        // Process jobs in background even when app is hidden
+        function processJobsInBackground() {
+            if (backgroundInterval) clearInterval(backgroundInterval);
+            
+            // Update status to show background processing
+            if (authStatus) {
+                authStatus.innerText = "🔄 BACKGROUND PROCESSING";
+                authStatus.className = "bg-purple-900/50 text-purple-300 px-3 py-1 rounded-full text-[11px] font-black tracking-widest border border-purple-500/50 background-mode";
+            }
+            
+            backgroundInterval = setInterval(() => {
+                const bufferMs = BUFFER_TIME_MINUTES * 60 * 1000;
+                const dt = 1; // Process 1 second at a time
+
+                for (let i = state.products.length - 1; i >= 0; i--) {
+                    const p = state.products[i];
+                    
+                    if (p.stage === 'p-belt') {
+                        p.pos += (state.speedP / 60) * dt;
+                        if (p.pos >= P_LENGTH) {
+                            p.stage = 'u-turn';
+                            p.uturnStart = Date.now();
+                            p.pos = 0;
+                        }
+                    } 
+                    else if (p.stage === 'u-turn') {
+                        const elapsed = Date.now() - p.uturnStart;
+                        if (elapsed >= bufferMs) {
+                            p.stage = 'r-belt';
+                            p.pos = 0;
+                        }
+                    } 
+                    else if (p.stage === 'r-belt') {
+                        p.pos += (state.speedR / 60) * dt;
+                        if (p.pos >= R_LENGTH) {
+                            p.stage = 'completed';
+                        }
+                    }
+                }
+                
+                // Save periodically in background
+                saveToLocalStorage();
+            }, 1000); // Update every 1 second
+        }
+
+        function stopBackgroundProcessing() {
+            if (backgroundInterval) {
+                clearInterval(backgroundInterval);
+                backgroundInterval = null;
+            }
+            // Restore normal status
+            if (authStatus) {
+                authStatus.innerText = "LOCAL STORAGE";
+                authStatus.className = "bg-green-900/30 text-green-400 px-3 py-1 rounded-full text-[11px] font-black tracking-widest border border-green-500/30";
+            }
+        }
 
         function animate(now) {
-            // Handle visibility - if not visible, just save and return
+            // When app is hidden, don't render but let background processing handle jobs
             if (!isPageVisible) {
                 requestAnimationFrame(animate);
                 return;
@@ -894,12 +1251,12 @@
                 }
                 
                 html += `<tr>
-                    <td class="px-6 py-4 font-black text-slate-300">${p.id}</td>
-                    <td class="px-6 py-4 uppercase text-[11px] tracking-widest">${segment}</td>
-                    <td class="px-6 py-4 font-medium text-slate-400">${zone}</td>
-                    <td class="px-6 py-4 font-mono text-slate-400">${formatElapsedTime(elapsedSinceLoad)}</td>
-                    <td class="px-6 py-4">${remainingTimeDisplay}</td>
-                    <td class="px-6 py-4 text-right">${statusDisplay}</td>
+                    <td class="px-6 py-4 font-black text-slate-300" data-label="Serial ID">${p.id}</td>
+                    <td class="px-6 py-4 uppercase text-[11px] tracking-widest" data-label="Line">${segment}</td>
+                    <td class="px-6 py-4 font-medium text-slate-400" data-label="Zone">${zone}</td>
+                    <td class="px-6 py-4 font-mono text-slate-400" data-label="Elapsed">${formatElapsedTime(elapsedSinceLoad)}</td>
+                    <td class="px-6 py-4" data-label="Remaining">${remainingTimeDisplay}</td>
+                    <td class="px-6 py-4 text-right" data-label="Status">${statusDisplay}</td>
                 </tr>`;
             });
             trackingBody.innerHTML = html;
@@ -910,25 +1267,32 @@
             if (emptyState) emptyState.style.display = activeJobs === 0 ? 'block' : 'none'; 
         }
 
-        // Handle page visibility changes - pause when minimized/hidden
+        // Handle page visibility changes - continue processing in background
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 // App is hidden (minimized or tab switched)
                 isPageVisible = false;
-                pauseTime = performance.now();
-                console.log('App minimized - jobs paused');
+                pauseTime = Date.now();
+                console.log('App minimized - starting background processing');
+                console.log('Active jobs:', state.products.filter(p => p.stage !== 'completed').length);
+                processJobsInBackground();
                 saveToLocalStorage();
             } else {
                 // App is visible again
                 isPageVisible = true;
+                stopBackgroundProcessing();
                 // Reset lastFrame to current time to avoid time jump
                 state.lastFrame = performance.now();
-                console.log('App resumed - jobs continue');
+                authStatus.classList.remove('background-mode');
+                console.log('App resumed - visual animation continues');
             }
         });
 
         // Save state before page unload
         window.addEventListener('beforeunload', () => {
+            console.log('Page unloading - products will continue in background');
+            console.log('Active jobs at close:', state.products.filter(p => p.stage !== 'completed').length);
+            processJobsInBackground();
             saveToLocalStorage();
         });
         
