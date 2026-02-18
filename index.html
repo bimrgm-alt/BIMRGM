@@ -6,6 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title> Control Pro </title>
+  <link rel="manifest" href="manifest.json">
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -106,6 +107,12 @@
       };
 
       useEffect(() => {
+        // Updated Service Worker Registration with explicit relative path
+        if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+          navigator.serviceWorker.register('./sw.js', { scope: './' })
+            .catch(err => console.log('SW registration failed:', err));
+        }
+
         const saved = localStorage.getItem('pc_compact_v5');
         if (saved) {
           const d = JSON.parse(saved);
