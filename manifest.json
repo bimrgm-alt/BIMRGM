@@ -9,8 +9,9 @@
 {
 "src": "icon.png",
 "sizes": "512x512",
-"type": ".png"
+"type": "image/png"
 }
 ]
 
 }
+
