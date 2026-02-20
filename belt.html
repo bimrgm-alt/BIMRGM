@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>M2Belt Sync System | Zone Tracking</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -197,11 +198,15 @@
             height: 32px;
         }
     </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body class="p-3 md:p-8">
 
     <div id="notification-center"></div>
 
+    <!-- Modal for Loading Product -->
     <div id="inputModal">
         <div class="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl">
             <h3 class="text-xl md:text-2xl font-black mb-6 text-blue-400 italic">LOAD NEW UNIT</h3>
@@ -227,11 +232,10 @@
         <header class="mb-6 border-b border-slate-700 pb-6 flex flex-col lg:flex-row justify-between lg:items-end gap-6">
             <div>
                 <div class="flex items-center gap-3">
-                    <a href="index.html" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded text-[10px] font-black uppercase transition-colors border border-slate-600">Home</a>
-                    <span class="text-2xl md:text-3xl font-black tracking-tighter text-blue-500 italic">M2Belt</span>
-                    <span class="bg-blue-500/10 text-blue-500 text-[10px] px-2 py-1 rounded font-black border border-blue-500/20">v2.6 PAIRS</span>
+                    <span class="text-2xl md:text-3xl font-black tracking-tighter text-blue-500 italic">M-2</span>
+                    <span class="bg-blue-500/10 text-blue-500 text-[10px] px-2 py-1 rounded font-black border border-blue-500/20">v2.7 VIKIRG</span>
                 </div>
-                <p class="text-slate-500 font-medium text-xs md:text-sm mt-1">Thermal Process Sync System</p>
+                <p class="text-slate-500 font-medium text-xs md:text-sm">Regmi Bimal Sync System</p>
             </div>
             
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-4 bg-slate-900/50 p-4 rounded-xl border border-slate-800">
@@ -262,6 +266,7 @@
         </header>
 
         <div class="conveyor-container mb-6 overflow-hidden">
+            <!-- HQ BELT -->
             <div class="mb-2 flex justify-between text-[9px] text-slate-400 font-black uppercase tracking-widest px-1">
                 <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> HQ (7.98m)</span>
                 <span id="pCount" class="text-blue-300">Units: 0</span>
@@ -278,21 +283,26 @@
                 </div>
             </div>
 
+            <!-- OIL PROCESS BELT (Visualizes the U-Turn) -->
             <div class="process-tank-container">
-                <div class="flex justify-between items-center mb-2">
+                <div class="flex justify-between items-center mb-2 px-1">
                     <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
                         OIL PROCESS (25M)
                     </div>
-                    <span id="uturnCount" class="text-white bg-blue-600 px-2 py-0.5 rounded-full text-[9px] font-black">0</span>
+                    <span id="uturnCount" class="text-white bg-amber-600 px-2 py-0.5 rounded-full text-[9px] font-black">0</span>
                 </div>
 
-                <div class="w-full flex gap-1 h-6 mb-2">
-                    <div id="tank-oil" class="tank-segment bg-amber-600/20 text-amber-500/40 rounded flex items-center justify-center text-[8px] font-black" style="width: 60%">OIL</div>
-                    <div id="tank-water" class="tank-segment bg-blue-600/20 text-blue-500/40 rounded flex items-center justify-center text-[8px] font-black" style="width: 20%">H2O</div>
-                    <div id="tank-fall" class="tank-segment bg-indigo-600/20 text-indigo-500/40 rounded flex items-center justify-center text-[8px] font-black" style="width: 20%">FALL</div>
+                <div class="belt-wrapper !mb-1 !border-none !shadow-none bg-slate-900/40 rounded-lg">
+                    <div class="conveyor-belt !h-[50px] md:!h-[60px]" id="beltTank">
+                         <!-- Visual dividers for stages -->
+                         <div id="tank-oil" class="zone-overlay bg-amber-600/5 text-amber-500/40" style="left: 0%; width: 60%; border-right: 1px dashed rgba(245,158,11,0.2);"><span>OIL</span></div>
+                         <div id="tank-water" class="zone-overlay bg-blue-600/5 text-blue-500/40" style="left: 60%; width: 20%; border-right: 1px dashed rgba(59,130,246,0.2);"><span>H2O</span></div>
+                         <div id="tank-fall" class="zone-overlay bg-indigo-600/5 text-indigo-500/40" style="left: 80%; width: 20%;"><span>FALL</span></div>
+                    </div>
                 </div>
             </div>
 
+            <!-- HT BELT -->
             <div class="mb-2 flex justify-between text-[9px] text-slate-400 font-black uppercase tracking-widest px-1">
                 <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> HT (7.20m)</span>
                 <span id="rCount" class="text-green-300">Units: 0</span>
@@ -310,49 +320,32 @@
         </div>
 
         <div class="bg-slate-900/80 rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
-            <div class="flex border-b border-slate-800">
-                <button onclick="switchTab('tracking')" id="tab-tracking" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-blue-500 text-white">Live Tracking</button>
-                <button onclick="switchTab('logs')" id="tab-logs" class="flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-transparent text-slate-500">Activity Log</button>
+            <div class="table-responsive">
+                <table class="w-full text-[11px] md:text-xs text-left min-w-[600px]">
+                    <thead class="bg-slate-800/50 text-slate-500 uppercase font-black tracking-widest">
+                        <tr>
+                            <th class="px-4 md:px-6 py-4">Unit / ID</th>
+                            <th class="px-4 md:px-6 py-4">Timing</th>
+                            <th class="px-4 md:px-6 py-4 text-center">Pos</th>
+                            <th class="px-4 md:px-6 py-4">Stage</th>
+                            <th class="px-4 md:px-6 py-4 text-right">Timer</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trackingBody"></tbody>
+                </table>
             </div>
-
-            <div id="view-tracking">
-                <div class="table-responsive">
-                    <table class="w-full text-[11px] md:text-xs text-left min-w-[600px]">
-                        <thead class="bg-slate-800/50 text-slate-500 uppercase font-black tracking-widest">
-                            <tr>
-                                <th class="px-4 md:px-6 py-4">Unit / ID</th>
-                                <th class="px-4 md:px-6 py-4">Timing</th>
-                                <th class="px-4 md:px-6 py-4 text-center">Pos</th>
-                                <th class="px-4 md:px-6 py-4">Stage</th>
-                                <th class="px-4 md:px-6 py-4 text-right">Timer</th>
-                            </tr>
-                        </thead>
-                        <tbody id="trackingBody"></tbody>
-                    </table>
-                </div>
-                <div id="emptyState" class="p-12 text-center text-slate-600 font-medium italic text-sm">Pipeline empty. Load unit to begin.</div>
-            </div>
-
-            <div id="view-logs" class="hidden">
-                <div class="table-responsive">
-                    <table class="w-full text-[11px] md:text-xs text-left">
-                        <thead class="bg-slate-800/50 text-slate-500 uppercase font-black tracking-widest">
-                            <tr>
-                                <th class="px-6 py-4">Timestamp</th>
-                                <th class="px-6 py-4">Unit</th>
-                                <th class="px-6 py-4">Event</th>
-                                <th class="px-6 py-4 text-right">Details</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logBody"></tbody>
-                    </table>
-                </div>
-                <div id="logEmptyState" class="p-12 text-center text-slate-600 font-medium italic text-sm">No logs for today.</div>
-            </div>
+            <div id="emptyState" class="p-12 text-center text-slate-600 font-medium italic text-sm">Pipeline empty. Load unit to begin.</div>
         </div>
     </div>
 
     <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW registration failed:', err));
+            });
+        }
+
         const P_LENGTH = 7980; 
         const R_LENGTH = 7200; 
         const UTURN_MS = 25 * 60 * 1000; 
@@ -361,7 +354,6 @@
         const speedS1 = document.getElementById('speedSlider1');
         const speedS2 = document.getElementById('speedSlider2');
         const trackingBody = document.getElementById('trackingBody');
-        const logBody = document.getElementById('logBody');
         const emptyState = document.getElementById('emptyState');
         const openBtns = [document.getElementById('openModal'), document.getElementById('openModalDesktop')];
         const inputModal = document.getElementById('inputModal');
@@ -371,70 +363,19 @@
         const errorName = document.getElementById('errorName');
         const notifContainer = document.getElementById('notification-center');
 
-        // State & Cleanup (24h)
-        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-        let savedLogs = JSON.parse(localStorage.getItem('m2belt_logs') || '[]');
-        const lastLogClear = parseInt(localStorage.getItem('m2belt_last_clear') || Date.now());
-        
-        if (Date.now() - lastLogClear > ONE_DAY_MS) {
-            savedLogs = [];
-            localStorage.setItem('m2belt_last_clear', Date.now().toString());
-        }
-
+        // Initial State
         const savedProducts = JSON.parse(localStorage.getItem('m2belt_products') || '[]');
         const savedCounter = parseInt(localStorage.getItem('m2belt_counter') || '0');
-        
         const state = {
             speedP: parseInt(localStorage.getItem('m2belt_speedP') || '177'), 
             speedR: parseInt(localStorage.getItem('m2belt_speedR') || '120'), 
             products: savedProducts,
-            logs: savedLogs,
             counter: savedCounter,
             lastFrameTime: performance.now(),
             textureOffsets: [0, 0]
         };
 
         const PRODUCT_COLORS = ["#22c55e", "#ef4444", "#3b82f6", "#a855f7", "#f59e0b", "#ec4899", "#14b8a6"];
-
-        function switchTab(tab) {
-            document.getElementById('view-tracking').classList.toggle('hidden', tab !== 'tracking');
-            document.getElementById('view-logs').classList.toggle('hidden', tab !== 'logs');
-            
-            document.getElementById('tab-tracking').className = tab === 'tracking' ? 
-                'flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-blue-500 text-white' : 
-                'flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-transparent text-slate-500';
-            
-            document.getElementById('tab-logs').className = tab === 'logs' ? 
-                'flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-blue-500 text-white' : 
-                'flex-1 py-4 text-[10px] font-black uppercase tracking-widest border-b-2 border-transparent text-slate-500';
-            
-            if(tab === 'logs') renderLogs();
-        }
-
-        function addLog(unitName, event, details = "") {
-            state.logs.unshift({
-                time: Date.now(),
-                unit: unitName,
-                event: event,
-                details: details
-            });
-            if(state.logs.length > 100) state.logs.pop(); // Keep manageable
-            saveToStorage();
-        }
-
-        function renderLogs() {
-            let html = '';
-            state.logs.forEach(l => {
-                html += `<tr class="border-t border-slate-800/50">
-                    <td class="px-6 py-4 font-mono text-slate-400 text-[10px]">${new Date(l.time).toLocaleTimeString()}</td>
-                    <td class="px-6 py-4 font-black text-white text-[10px]">${l.unit}</td>
-                    <td class="px-6 py-4 uppercase font-bold text-[9px] ${l.event === 'LOAD' ? 'text-blue-400' : 'text-red-400'}">${l.event}</td>
-                    <td class="px-6 py-4 text-right text-slate-500 text-[10px]">${l.details}</td>
-                </tr>`;
-            });
-            logBody.innerHTML = html;
-            document.getElementById('logEmptyState').style.display = state.logs.length === 0 ? 'block' : 'none';
-        }
 
         function notify(msg, isProcess = false) {
             const toast = document.createElement('div');
@@ -470,7 +411,6 @@
                 subZone: p.subZone, colorIndex: p.colorIndex
             }));
             localStorage.setItem('m2belt_products', JSON.stringify(cleanData));
-            localStorage.setItem('m2belt_logs', JSON.stringify(state.logs));
             localStorage.setItem('m2belt_counter', state.counter.toString());
             localStorage.setItem('m2belt_speedP', state.speedP.toString());
             localStorage.setItem('m2belt_speedR', state.speedR.toString());
@@ -527,7 +467,6 @@
                 notifiedWater: false, notifiedFall: false, subZone: "OIL ZONE"
             });
             
-            addLog(name, "LOAD", `In: ${formatClock(now)}`);
             state.counter++;
             modalProdName.value = '';
             inputModal.style.display = 'none';
@@ -594,6 +533,18 @@
                     uturnCount++;
                     const elapsedMs = now - p.uturnStart;
                     const elapsedMin = elapsedMs / 60000;
+                    const pct = Math.min(elapsedMs / UTURN_MS, 1);
+
+                    // Add visual element for tank if missing
+                    if (!p.element) {
+                        p.element = document.createElement('div');
+                        p.element.className = 'product';
+                        document.getElementById('beltTank').appendChild(p.element);
+                    }
+                    p.element.style.backgroundColor = p.color;
+                    p.element.innerHTML = `<span class="opacity-60 text-[6px] font-black">${p.id}</span><span class="font-black">${p.name}</span>`;
+                    const bEl = document.getElementById('beltTank');
+                    p.element.style.transform = `translateX(${pct * (bEl.offsetWidth - p.element.offsetWidth)}px)`;
 
                     if (elapsedMin < 15) { p.subZone = "OIL ZONE"; subZonePresence.oil = true; } 
                     else if (elapsedMin < 20) {
@@ -607,6 +558,7 @@
                     if (elapsedMs >= UTURN_MS) {
                         p.stage = 'r-belt';
                         p.returnStartTime = p.uturnStart + UTURN_MS;
+                        if (p.element) { p.element.remove(); p.element = null; }
                         stateChanged = true;
                     }
                 } 
@@ -626,7 +578,6 @@
                     p.element.style.transform = `translateX(${(bEl.offsetWidth - p.element.offsetWidth) - (pct * (bEl.offsetWidth - p.element.offsetWidth))}px)`;
 
                     if (sync.isFin) {
-                        addLog(p.name, "EXIT", `Total: ${Math.floor((now - p.startTime)/60000)}m`);
                         if (p.element) p.element.remove();
                         state.products.splice(i, 1);
                         stateChanged = true;
@@ -643,14 +594,14 @@
                 else el.classList.remove('zone-active');
             });
 
-            const updateTank = (id, active) => {
+            const updateTankOverlay = (id, active) => {
                 const el = document.getElementById(id);
-                if (active) el.classList.add('active', 'bg-slate-400/20');
-                else el.classList.remove('active', 'bg-slate-400/20');
+                if (active) el.classList.add('zone-active');
+                else el.classList.remove('zone-active');
             }
-            updateTank('tank-oil', subZonePresence.oil);
-            updateTank('tank-water', subZonePresence.water);
-            updateTank('tank-fall', subZonePresence.fall);
+            updateTankOverlay('tank-oil', subZonePresence.oil);
+            updateTankOverlay('tank-water', subZonePresence.water);
+            updateTankOverlay('tank-fall', subZonePresence.fall);
 
             document.getElementById('uturnCount').innerText = uturnCount;
             document.getElementById('pCount').innerText = `U: ${state.products.filter(x => x.stage === 'p-belt').length}`;
@@ -673,7 +624,6 @@
                     remTxt = formatTimeRemaining((UTURN_MS - (now - p.uturnStart)) / 60000);
                 } else if (p.stage === 'r-belt') {
                     status = `<span class="text-green-400 font-bold uppercase text-[9px]">HT</span>`;
-                    remTxt = formatTimeRemaining(sync.rem);
                 }
 
                 html += `<tr class="border-t border-slate-800/50 hover:bg-white/5">
@@ -703,6 +653,23 @@
 
         updateEmptyState();
         requestAnimationFrame(animate);
+    </script>
+    <script>
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+  apiKey: "AIzaSyCJRHHMtr9SwGE1HbXf8la1NuAj7Oro4DM",
+  authDomain: "vikirg-429f4.firebaseapp.com",
+  projectId: "vikirg-429f4",
+  storageBucket: "vikirg-429f4.firebasestorage.app",
+  messagingSenderId: "310357109269",
+  appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
+  measurementId: "G-GLNC5DYP9V"
+};
+      };
+
+      // Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
     </script>
 </body>
 </html>
