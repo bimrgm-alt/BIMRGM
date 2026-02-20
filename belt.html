@@ -669,10 +669,24 @@ const firebaseConfig = {
   appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
   measurementId: "G-GLNC5DYP9V"
 };
-
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+        // डेटाबेसमा डाटा पठाउने फङ्सन
+async function testSave() {
+    try {
+        const docRef = await addDoc(collection(db, "testCollection"), {
+            message: "नमस्ते Firebase!",
+            time: new Date()
+        });
+        console.log("डाटा सेभ भयो! ID: ", docRef.id);
+    } catch (e) {
+        console.error("सेभ भएन: ", e);
+    }
+}
+
+// पेज खुल्ने बित्तिकै एउटा डाटा पठाएर हेर्नुहोस्
+testSave();
     </script>
 </body>
 </html>
