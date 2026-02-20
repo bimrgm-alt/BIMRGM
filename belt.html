@@ -672,7 +672,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
-        // डेटाबेसमा डाटा पठाउने फङ्सन
+        const db = getFirestore(app);     
 async function testSave() {
     try {
         const docRef = await addDoc(collection(db, "testCollection"), {
@@ -684,8 +684,6 @@ async function testSave() {
         console.error("सेभ भएन: ", e);
     }
 }
-
-// पेज खुल्ने बित्तिकै एउटा डाटा पठाएर हेर्नुहोस्
 testSave();
     </script>
 </body>
