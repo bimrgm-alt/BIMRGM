@@ -654,65 +654,53 @@
         requestAnimationFrame(animate);
     </script>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  // १. आवश्यक Libraries Import गर्ने (CDN URL प्रयोग गरेर)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+  import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyCJRHHMtr9SwGE1HbXf8la1NuAj7Oro4DM",
-            authDomain: "vikirg-429f4.firebaseapp.com",
-            projectId: "vikirg-429f4",
-            storageBucket: "vikirg-429f4.firebasestorage.app",
-            messagingSenderId: "310357109269",
-            appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
-            measurementId: "G-GLNC5DYP9V"
-        };
+  // २. तपाईंको Firebase Configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyCJRHHMtr9SwGE1HbXf8la1NuAj7Oro4DM",
+    authDomain: "vikirg-429f4.firebaseapp.com",
+    projectId: "vikirg-429f4",
+    storageBucket: "vikirg-429f4.firebasestorage.app",
+    messagingSenderId: "310357109269",
+    appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
+    measurementId: "G-GLNC5DYP9V"
+  };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+  // ३. Initialize Firebase र Firestore
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore(app);
 
-        // testSave(); // Commented out to prevent duplicate auto-messages
+  // ४. डाटा सेभ गर्ने फङ्सन (तपाईंको ओरिजिनल लोजिक)
+  async function testSave() {
+    try {
+      const docRef = await addDoc(collection(db, "testCollection"), {
+        message: "नमस्ते Firebase!",
+        time: new Date()
+      });
+      console.log("डाटा सेभ भयो! ID: ", docRef.id);
+    } catch (e) {
+      console.error("सेभ भएन: ", e);
+    }
+  }
 
-        // 1. Function to Display and Delete Data
-        function displayData() {
-            const q = query(collection(db, "testCollection"), orderBy("time", "desc"));
+  // ५. डाटा रियल-टाइममा देखाउने फङ्सन
+  function displayData() {
+    const q = query(collection(db, "testCollection"), orderBy("time", "desc"));
+    onSnapshot(q, (snapshot) => {
+      console.log("डेटाबेस अपडेट भयो!");
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        console.log("डाटा:", data.message);
+      });
+    });
+  }
 
-            onSnapshot(q, (snapshot) => {
-                let html = '<h3 class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 italic">Firebase Logs</h3>';
-                
-                if (snapshot.docs.length === 0) {
-                    html += '<p class="text-slate-600 text-xs italic">No messages found in database.</p>';
-                }
-
-                snapshot.docs.forEach(docSnapshot => {
-                    const data = docSnapshot.data();
-                    const id = docSnapshot.id;
-
-                    html += `
-                        <div class="flex justify-between items-center bg-slate-900/50 p-3 mb-2 rounded-lg border border-slate-700/50">
-                            <span class="text-xs font-medium text-slate-300">${data.message}</span>
-                            <button onclick="deleteItem('${id}')" class="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1 rounded text-[10px] font-black transition-all">DELETE</button>
-                        </div>
-                    `;
-                });
-                
-                document.getElementById("displayArea").innerHTML = html;
-            });
-        }
-
-        // 2. Make Delete Global
-        window.deleteItem = async (id) => {
-            if(confirm("के तपाईं यो डाटा हटाउन चाहनुहुन्छ?")) {
-                try {
-                    await deleteDoc(doc(db, "testCollection", id));
-                    console.log("डाटा हटाइयो!");
-                } catch (error) {
-                    console.error("Error removing document: ", error);
-                }
-            }
-        }
-
-        displayData();
-    </script>
-</body>
-</html>
+  // फङ्सनहरू कल गर्ने
+  // testSave(); // हरेक पटक नयाँ डाटा नथपियोस् भन्नका लागि यसलाई अहिले बन्द गर्न सकिन्छ
+  displayData();
+</script>
