@@ -206,7 +206,6 @@
 
     <div id="notification-center"></div>
 
-    <!-- Modal for Loading Product -->
     <div id="inputModal">
         <div class="bg-slate-800 p-6 md:p-8 rounded-2xl border border-slate-700 w-full max-w-md shadow-2xl">
             <h3 class="text-xl md:text-2xl font-black mb-6 text-blue-400 italic">LOAD NEW UNIT</h3>
@@ -266,7 +265,6 @@
         </header>
 
         <div class="conveyor-container mb-6 overflow-hidden">
-            <!-- HQ BELT -->
             <div class="mb-2 flex justify-between text-[9px] text-slate-400 font-black uppercase tracking-widest px-1">
                 <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div> HQ (7.98m)</span>
                 <span id="pCount" class="text-blue-300">Units: 0</span>
@@ -283,7 +281,6 @@
                 </div>
             </div>
 
-            <!-- OIL PROCESS BELT (Visualizes the U-Turn) -->
             <div class="process-tank-container">
                 <div class="flex justify-between items-center mb-2 px-1">
                     <div class="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
@@ -294,7 +291,6 @@
 
                 <div class="belt-wrapper !mb-1 !border-none !shadow-none bg-slate-900/40 rounded-lg">
                     <div class="conveyor-belt !h-[50px] md:!h-[60px]" id="beltTank">
-                         <!-- Visual dividers for stages -->
                          <div id="tank-oil" class="zone-overlay bg-amber-600/5 text-amber-500/40" style="left: 0%; width: 60%; border-right: 1px dashed rgba(245,158,11,0.2);"><span>OIL</span></div>
                          <div id="tank-water" class="zone-overlay bg-blue-600/5 text-blue-500/40" style="left: 60%; width: 20%; border-right: 1px dashed rgba(59,130,246,0.2);"><span>H2O</span></div>
                          <div id="tank-fall" class="zone-overlay bg-indigo-600/5 text-indigo-500/40" style="left: 80%; width: 20%;"><span>FALL</span></div>
@@ -302,7 +298,6 @@
                 </div>
             </div>
 
-            <!-- HT BELT -->
             <div class="mb-2 flex justify-between text-[9px] text-slate-400 font-black uppercase tracking-widest px-1">
                 <span class="flex items-center gap-1.5"><div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> HT (7.20m)</span>
                 <span id="rCount" class="text-green-300">Units: 0</span>
@@ -335,6 +330,10 @@
                 </table>
             </div>
             <div id="emptyState" class="p-12 text-center text-slate-600 font-medium italic text-sm">Pipeline empty. Load unit to begin.</div>
+        </div>
+
+        <div id="displayArea" class="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700 shadow-xl">
+             <p class="text-slate-500 italic text-xs">Connecting to Firebase...</p>
         </div>
     </div>
 
@@ -655,36 +654,65 @@
         requestAnimationFrame(animate);
     </script>
     <script type="module">
-     // Import the functions you need from the SDKs you need
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-// Firestore प्रयोग गर्ने
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyCJRHHMtr9SwGE1HbXf8la1NuAj7Oro4DM",
-  authDomain: "vikirg-429f4.firebaseapp.com",
-  projectId: "vikirg-429f4",
-  storageBucket: "vikirg-429f4.firebasestorage.app",
-  messagingSenderId: "310357109269",
-  appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
-  measurementId: "G-GLNC5DYP9V"
-};
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-        const db = getFirestore(app);     
-async function testSave() {
-    try {
-        const docRef = await addDoc(collection(db, "testCollection"), {
-            message: "नमस्ते Firebase!",
-            time: new Date()
-        });
-        console.log("डाटा सेभ भयो! ID: ", docRef.id);
-    } catch (e) {
-        console.error("सेभ भएन: ", e);
-    }
-}
-testSave();
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJRHHMtr9SwGE1HbXf8la1NuAj7Oro4DM",
+            authDomain: "vikirg-429f4.firebaseapp.com",
+            projectId: "vikirg-429f4",
+            storageBucket: "vikirg-429f4.firebasestorage.app",
+            messagingSenderId: "310357109269",
+            appId: "1:310357109269:web:9c76d2f841d7ed1837fc1c",
+            measurementId: "G-GLNC5DYP9V"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // testSave(); // Commented out to prevent duplicate auto-messages
+
+        // 1. Function to Display and Delete Data
+        function displayData() {
+            const q = query(collection(db, "testCollection"), orderBy("time", "desc"));
+
+            onSnapshot(q, (snapshot) => {
+                let html = '<h3 class="text-sm font-black text-blue-400 uppercase tracking-widest mb-4 italic">Firebase Logs</h3>';
+                
+                if (snapshot.docs.length === 0) {
+                    html += '<p class="text-slate-600 text-xs italic">No messages found in database.</p>';
+                }
+
+                snapshot.docs.forEach(docSnapshot => {
+                    const data = docSnapshot.data();
+                    const id = docSnapshot.id;
+
+                    html += `
+                        <div class="flex justify-between items-center bg-slate-900/50 p-3 mb-2 rounded-lg border border-slate-700/50">
+                            <span class="text-xs font-medium text-slate-300">${data.message}</span>
+                            <button onclick="deleteItem('${id}')" class="bg-red-500/20 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1 rounded text-[10px] font-black transition-all">DELETE</button>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById("displayArea").innerHTML = html;
+            });
+        }
+
+        // 2. Make Delete Global
+        window.deleteItem = async (id) => {
+            if(confirm("के तपाईं यो डाटा हटाउन चाहनुहुन्छ?")) {
+                try {
+                    await deleteDoc(doc(db, "testCollection", id));
+                    console.log("डाटा हटाइयो!");
+                } catch (error) {
+                    console.error("Error removing document: ", error);
+                }
+            }
+        }
+
+        displayData();
     </script>
 </body>
 </html>
